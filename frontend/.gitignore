@@ -1,0 +1,18 @@
+# Dependency directory
+node_modules/
+
+# Build output
+build/
+
+# Testing
+coverage/
+
+# Environment variables
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+npm-debug.log*
