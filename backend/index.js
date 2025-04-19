@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const verifyJWT = require("./middleware/verifyJWT");
+const verifyJWT = require('./middleware/verifyJWT');
 require('dotenv').config();
 
 const app = express();
@@ -24,7 +24,7 @@ const userAPI = require('./routes/api/userAPI');
 
 
 
-app.use(verifyJWT);
+app.use(verifyJWT.verifyJWT);
 app.use('/policies', policyAPI);
 app.use('/departments', departmentAPI);
 app.use('/users', userAPI);
