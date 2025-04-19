@@ -25,7 +25,7 @@ const userAPI = require('./routes/api/userAPI');
 
 
 app.use(verifyJWT.verifyJWT);
-app.use('/policies', policyAPI);
-app.use('/departments', departmentAPI);
-app.use('/users', userAPI);
+app.use('/api/policies', policyAPI);
+app.use('/api/departments', departmentAPI);
+app.use('/api/users', userAPI);
 
