@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 const handleLogin = async (req, res) => {
     const { email, password} = req.body;
@@ -7,7 +8,8 @@ const handleLogin = async (req, res) => {
 
     const foundEmail = await User.findOne({email: email}).exec();
     if (!foundEmail) return res.sendStatus(401); //Unauthorized
-    if (password === foundEmail.password) {
+    const match = await bcrypt.compare(password, foundEmail.password);
+    if (match) {
         // create JWTs
         const accessToken = jwt.sign(
             {

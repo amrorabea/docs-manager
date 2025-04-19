@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const verifyJWT = require('./middleware/verifyJWT');
 require('dotenv').config();
+const helmet = require('helmet');
+app.use(helmet());
 
 const app = express();
 app.use(cors());
