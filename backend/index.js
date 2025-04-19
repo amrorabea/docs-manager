@@ -22,9 +22,20 @@ const policyAPI = require('./routes/api/policyAPI');
 const departmentAPI = require('./routes/api/departmentAPI');
 const userAPI = require('./routes/api/userAPI');
 
+const rootRoutes = require('./routes/rootRoute');
+const registerRoutes = require('./routes/registerRoute');
+const authRoutes = require('./routes/authRoute');
+const refreshRoutes = require('./routes/refreshRoute');
+const logoutRoutes = require('./routes/logoutRoute');
 
+app.use('/', rootRoutes);
+app.use('/register', registerRoutes);
+app.use('/auth', authRoutes);
+app.use('/refresh', refreshRoutes);
+app.use('/logout', logoutRoutes);
 
 app.use(verifyJWT.verifyJWT);
+
 app.use('/api/policies', policyAPI);
 app.use('/api/departments', departmentAPI);
 app.use('/api/users', userAPI);
