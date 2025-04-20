@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import axios from '../../services/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getUserById, deleteUser } from '../../services/userService';
 import './Users.css';
 
 const UserDetails = () => {
@@ -8,22 +8,36 @@ const UserDetails = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get(`/api/users/user/${email}`);
-        setUser(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to fetch user details');
-        setLoading(false);
-        console.error('Error fetching user:', err);
-      }
-    };
-
     fetchUser();
   }, [email]);
+
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      const userData = await getUserById(email);
+      setUser(userData);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to fetch user details');
+      setLoading(false);
+      console.error('Error fetching user:', err);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا المستخدم؟')) {
+      try {
+        await deleteUser(user._id);
+        navigate('/users');
+      } catch (err) {
+        console.error(`Error deleting user ${user._id}:`, err);
+        alert('فشل في حذف المستخدم. الرجاء المحاولة مرة أخرى.');
+      }
+    }
+  };
 
   if (loading) return <div className="loading">جاري التحميل...</div>;
   if (error) return <div className="error">{error}</div>;
@@ -52,8 +66,8 @@ const UserDetails = () => {
       </div>
       <div className="user-actions">
         <Link to="/users" className="back-btn">العودة للقائمة</Link>
-        <button className="edit-btn">تعديل</button>
-        <button className="delete-btn">حذف</button>
+        <Link to={`/users/edit/${user._id}`} className="edit-btn">تعديل</Link>
+        <button className="delete-btn" onClick={handleDeleteUser}>حذف</button>
       </div>
     </div>
   );
