@@ -5,10 +5,10 @@ const verifyJWT = require('./middleware/verifyJWT');
 require('dotenv').config();
 const helmet = require('helmet');
 const compression = require('compression');
+const app = express();
 app.use(helmet());
 app.use(compression());
 
-const app = express();
 app.use(cors({
     origin: 'http://localhost:3000', // Specify your frontend origin exactly
     credentials: true,               // Allow credentials
