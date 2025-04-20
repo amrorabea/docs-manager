@@ -19,9 +19,9 @@ router.put('/update/:id', verifyJWT.verifyJWT, userController.updateUser);
 router.get('/all', verifyJWT.verifyJWT, userController.getAllUsers);
 
 // @desc    Get a single user
-// @route   GET /api/users/user/:id
+// @route   GET /api/users/user/:email
 // @access  Private (authentication required)
-router.get('/user/:id', verifyJWT.verifyJWT, userController.getUser);
+router.get('/user/:email', verifyJWT.verifyJWT, userController.getUser);
 
 // @desc    Delete a user
 // @route   DELETE /api/users/delete/:id

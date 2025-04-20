@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { login as apiLogin, logout as apiLogout, refresh } from '../services/authService';
+import { login as apiLogin, logout as apiLogout, refresh, clearAuthData } from '../services/authService';
 import { jwtDecode } from 'jwt-decode';
 
 
@@ -44,24 +44,53 @@ export const AuthProvider = ({ children }) => {
     }
   }, [auth]);
 
-  // Initial session verification
+  // Initial session verification - prevent auto-refresh for users who haven't explicitly logged in
   useEffect(() => {
     const verifyRefreshToken = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Only try to refresh if we don't have a valid token
-        if (!auth?.accessToken) {
-          const response = await refresh();
-          if (response?.accessToken) {
-            setAuth(response);
+        // First, check if the user has explicitly logged in before
+        const hasExplicitlyLoggedIn = localStorage.getItem('hasLoggedIn') === 'true';
+        
+        if (!hasExplicitlyLoggedIn) {
+          console.log('No previous login detected, skipping token refresh');
+          // Force clear all auth data to be safe
+          clearAuthData(); 
+          setLoading(false);
+          return;
+        }
+
+        // Check if there's a refresh token cookie before attempting to refresh
+        const hasRefreshToken = document.cookie.split(';').some(item => item.trim().startsWith('jwt='));
+        
+        // Only try to refresh if we don't have a valid token but do have a refresh token cookie
+        if (!auth?.accessToken && hasRefreshToken && hasExplicitlyLoggedIn) {
+          console.log('Found refresh token cookie, attempting to refresh access token');
+          
+          try {
+            const response = await refresh();
+            if (response?.accessToken) {
+              setAuth(response);
+            }
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+            // Force clear all auth data on refresh error
+            clearAuthData();
+            localStorage.removeItem('hasLoggedIn');
           }
+        } else if (!hasRefreshToken) {
+          console.log('No refresh token cookie found, skipping token refresh');
+          // Ensure any potential leftover data is cleared if no refresh token exists
+          clearAuthData();
         }
       } catch (err) {
-        console.error('Refresh token error:', err);
+        console.error('Session verification error:', err);
         // Clear any potentially invalid auth state
         setAuth({});
+        clearAuthData();
+        localStorage.removeItem('hasLoggedIn');
       } finally {
         setLoading(false);
       }
@@ -95,6 +124,9 @@ export const AuthProvider = ({ children }) => {
         // Also store user info and access token in localStorage
         localStorage.setItem('accessToken', response.accessToken);
         localStorage.setItem('user', JSON.stringify(decodedUser));  // Store decoded user info
+        
+        // Set the flag to indicate explicit login
+        localStorage.setItem('hasLoggedIn', 'true');
   
         return response;
       } else {
@@ -123,6 +155,13 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // Always clear auth state on logout
       setAuth({});
+      
+      // Use the comprehensive utility function to clear all auth data
+      clearAuthData();
+      
+      // Clear the explicit login flag
+      localStorage.removeItem('hasLoggedIn');
+      
       setLoading(false);
     }
   }, [auth?.accessToken]);

@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPolicy, createPolicy, updatePolicy } from '../../services/policyService';
-import PolicyContext from '../../context/PolicyContext';
 import { formatDateForInput } from '../../utils/dateFormatter';
+import PageLayout from '../Layout/PageLayout';
+import Button from '../UI/Button';
+import Loading from '../UI/Loading';
+import ErrorMessage from '../UI/ErrorMessage';
+import usePolicyContext from '../../hooks/usePolicyContext';
 import './Policy.css';
 
 const PolicyForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { departments, refreshPolicies } = useContext(PolicyContext);
+  const { departments, refreshPolicies } = usePolicyContext();
   const [formData, setFormData] = useState({
     name: '',
     department: '',
@@ -25,11 +29,6 @@ const PolicyForm = () => {
     wordFileUrl: '',
     pdfFileUrl: ''
   });
-
-  // Debug log for monitoring state
-  useEffect(() => {
-    console.log('Current formData:', formData);
-  }, [formData]);
 
   useEffect(() => {
     if (id) {
@@ -93,18 +92,6 @@ const PolicyForm = () => {
     try {
       const formDataToSend = new FormData();
       
-      // Log what we're about to send
-      console.log('Preparing to send policy data:', {
-        name: formData.name,
-        department: formData.department,
-        approvalDate: formData.approvalDate,
-        reviewCycleYears: formData.reviewCycleYears,
-        approvalValidity: formData.approvalValidity,
-        status: formData.status,
-        hasWordFile: !!formData.wordFile,
-        hasPdfFile: !!formData.pdfFile
-      });
-      
       // Add text fields
       formDataToSend.append('name', formData.name);
       formDataToSend.append('department', formData.department);
@@ -123,13 +110,9 @@ const PolicyForm = () => {
       }
 
       if (id) {
-        console.log(`Updating policy with ID: ${id}`);
-        const result = await updatePolicy(id, formDataToSend);
-        console.log('Update result:', result);
+        await updatePolicy(id, formDataToSend);
       } else {
-        console.log('Creating new policy');
-        const result = await createPolicy(formDataToSend);
-        console.log('Creation result:', result);
+        await createPolicy(formDataToSend);
       }
       
       refreshPolicies();
@@ -138,12 +121,6 @@ const PolicyForm = () => {
       console.error('Error saving policy:', err);
       
       if (err.response) {
-        console.error('Server response error:', {
-          status: err.response.status,
-          data: err.response.data,
-          headers: err.response.headers
-        });
-        
         if (err.response.data && err.response.data.message) {
           setError(err.response.data.message);
         } else if (err.response.status === 400) {
@@ -160,10 +137,8 @@ const PolicyForm = () => {
           setError('فشل حفظ السياسة. يرجى المحاولة مرة أخرى.');
         }
       } else if (err.request) {
-        console.error('No response received:', err.request);
         setError('لم يتم تلقي استجابة من الخادم. تحقق من اتصالك بالإنترنت.');
       } else {
-        console.error('Request setup error:', err.message);
         setError(`خطأ في الطلب: ${err.message}`);
       }
     } finally {
@@ -172,14 +147,27 @@ const PolicyForm = () => {
   };
 
   if (loading && id && !formData.name) {
-    return <div className="loading">جاري التحميل...</div>;
+    return <Loading />;
   }
 
+  const formActions = (
+    <div className="form-actions">
+      <Button 
+        type="button" 
+        variant="secondary" 
+        onClick={() => navigate('/')}
+      >
+        العودة
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="policy-form-container">
-      <h2 className="form-title">{id ? 'تعديل سياسة' : 'إضافة سياسية'}</h2>
-      
-      {error && <div className="error-message">{error}</div>}
+    <PageLayout 
+      title={id ? 'تعديل سياسة' : 'إضافة سياسة'}
+      actions={formActions}
+    >
+      {error && <ErrorMessage message={error} />}
       
       <form onSubmit={handleSubmit} className="policy-form">
         <div className="form-group">
@@ -250,14 +238,14 @@ const PolicyForm = () => {
               value={formData.reviewCycleYears}
               onChange={handleChange}
               min="1"
-              max="10"
+              max="3"
               required
               className="form-control"
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="status">حالة السياسة</label>
+            <label htmlFor="status">الحالة</label>
             <select
               id="status"
               name="status"
@@ -265,8 +253,8 @@ const PolicyForm = () => {
               onChange={handleChange}
               className="form-control"
             >
-              <option value="valid">سارية</option>
-              <option value="expired">منتهية</option>
+              <option value="valid">ساري</option>
+              <option value="expired">منتهي</option>
               <option value="draft">مسودة</option>
             </select>
           </div>
@@ -274,63 +262,51 @@ const PolicyForm = () => {
         
         <div className="form-group">
           <label htmlFor="wordFile">ملف Word</label>
-          <div className="file-input-container">
-            <input
-              type="file"
-              id="wordFile"
-              name="wordFile"
-              onChange={handleFileChange}
-              accept=".doc,.docx"
-              className="file-input"
-            />
-            {existingFiles.wordFileUrl && (
-              <div className="existing-file">
-                <span>الملف الحالي: </span>
-                <a href={existingFiles.wordFileUrl} target="_blank" rel="noopener noreferrer" className="file-link word">
-                  عرض الملف
-                </a>
-              </div>
-            )}
-          </div>
+          <input
+            type="file"
+            id="wordFile"
+            name="wordFile"
+            onChange={handleFileChange}
+            accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="form-control file-input"
+          />
+          {existingFiles.wordFileUrl && (
+            <div className="existing-file">
+              <span>الملف الحالي: </span>
+              <a href={existingFiles.wordFileUrl} target="_blank" rel="noopener noreferrer">
+                عرض الملف الحالي
+              </a>
+            </div>
+          )}
         </div>
         
         <div className="form-group">
           <label htmlFor="pdfFile">ملف PDF</label>
-          <div className="file-input-container">
-            <input
-              type="file"
-              id="pdfFile"
-              name="pdfFile"
-              onChange={handleFileChange}
-              accept=".pdf"
-              className="file-input"
-            />
-            {existingFiles.pdfFileUrl && (
-              <div className="existing-file">
-                <span>الملف الحالي: </span>
-                <a href={existingFiles.pdfFileUrl} target="_blank" rel="noopener noreferrer" className="file-link pdf">
-                  عرض الملف
-                </a>
-              </div>
-            )}
-          </div>
+          <input
+            type="file"
+            id="pdfFile"
+            name="pdfFile"
+            onChange={handleFileChange}
+            accept=".pdf,application/pdf"
+            className="form-control file-input"
+          />
+          {existingFiles.pdfFileUrl && (
+            <div className="existing-file">
+              <span>الملف الحالي: </span>
+              <a href={existingFiles.pdfFileUrl} target="_blank" rel="noopener noreferrer">
+                عرض الملف الحالي
+              </a>
+            </div>
+          )}
         </div>
         
         <div className="form-actions">
-          <button type="submit" className="save-btn" disabled={loading}>
-            {loading ? 'جاري الحفظ...' : 'حفظ'}
-          </button>
-          <button 
-            type="button" 
-            className="cancel-btn" 
-            onClick={() => navigate('/')}
-            disabled={loading}
-          >
-            إلغاء
-          </button>
+          <Button type="submit" variant="primary" disabled={loading}>
+            {loading ? 'جاري الحفظ...' : id ? 'حفظ التعديلات' : 'إضافة السياسة'}
+          </Button>
         </div>
       </form>
-    </div>
+    </PageLayout>
   );
 };
 

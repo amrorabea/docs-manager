@@ -68,11 +68,11 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-// Get a single user by ID
+// Get a single user by email
 exports.getUser = async (req, res) => {
-    const { id } = req.params;
+    const { email } = req.params;
     try {
-        const user = await User.findById(id);
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }

@@ -1,94 +1,56 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PolicyContext from '../../context/PolicyContext';
-import { deletePolicy } from '../../services/policyService';
-import AuthContext from '../../context/AuthContext';
-import './Policy.css';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus } from 'react-icons/fa';
+import { deletePolicy, downloadPolicyFile } from '../../services/policyService';
+import useAuth from '../../hooks/useAuth';
+import usePolicyContext from '../../hooks/usePolicyContext';
+import SearchBar from './SearchBar';
+import Statistics from '../Dashboard/Statistics';
+import PageLayout from '../Layout/PageLayout';
+import Button from '../UI/Button';
+import Loading from '../UI/Loading';
+import ErrorMessage from '../UI/ErrorMessage';
+import EmptyState from '../UI/EmptyState';
+import StatusBadge from '../UI/StatusBadge';
+import './PolicyList.css';
 
 const PolicyList = () => {
-  const { policies, departments, loading, error, stats, refreshPolicies } = useContext(PolicyContext);
-  const { auth } = useContext(AuthContext);
-  const navigate = useNavigate();
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [filteredPolicies, setFilteredPolicies] = useState([]);
-  const [expandedDepartments, setExpandedDepartments] = useState({});
-  
-  // Filter policies based on search term and selected department
-  useEffect(() => {
-    if (!policies) return;
-    
-    let filtered = [...policies];
-    
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(policy => 
-        policy.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    // Filter by department
-    if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(policy => 
-        policy.department._id === selectedDepartment
-      );
-    }
-    
-    setFilteredPolicies(filtered);
-  }, [policies, searchTerm, selectedDepartment]);
-  
-  // Group policies by department
-  const groupedPolicies = () => {
-    const grouped = {};
-    
-    if (!filteredPolicies) return grouped;
-    
-    filteredPolicies.forEach(policy => {
-      const deptId = policy.department._id;
-      const deptName = policy.department.name;
-      
-      if (!grouped[deptId]) {
-        grouped[deptId] = {
-          name: deptName,
-          policies: []
-        };
+  // Get context data
+  const { policies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
+  const { user, logout } = useAuth();
+
+  const handleSearch = async (query) => {
+    try {
+      if (!query.trim()) {
+        // If search is empty, exit search mode
+        if (isSearchMode) {
+          setIsSearchMode(false);
+          setSearchQuery('');
+          refreshPolicies();
+        }
+        return;
       }
       
-      grouped[deptId].policies.push(policy);
-    });
-    
-    return grouped;
+      console.log('PolicyList: Initiating search for:', query);
+      setSearchQuery(query);
+      setIsSearchMode(true);
+      // Use the search function from context
+      const departmentId = selectedDepartment || null;
+      await searchPolicies(query, departmentId);
+    } catch (err) {
+      console.error('Search error:', err);
+    }
   };
-  
-  const toggleDepartment = (deptId) => {
-    setExpandedDepartments(prev => ({
-      ...prev,
-      [deptId]: !prev[deptId]
-    }));
-  };
-  
-  const handleSearch = (e) => {
-    e.preventDefault();
-    // The filtering is already handled by the useEffect
-  };
-  
-  const handleAddPolicy = () => {
-    navigate('/add-policy');
-  };
-  
-  const handleEditPolicy = (id) => {
-    navigate(`/edit-policy/${id}`);
-  };
-  
-  const handleViewPolicy = (id) => {
-    navigate(`/view-policy/${id}`);
-  };
-  
+
   const handleDeletePolicy = async (id) => {
     if (window.confirm('هل أنت متأكد من حذف هذه السياسة؟')) {
       try {
         await deletePolicy(id);
+        // Refresh policies after deletion
         refreshPolicies();
       } catch (err) {
         console.error('Error deleting policy:', err);
@@ -96,175 +58,153 @@ const PolicyList = () => {
       }
     }
   };
-  
-  const isPolicyExpired = (reviewDate) => {
-    const today = new Date();
-    const review = new Date(reviewDate);
-    return review < today;
+
+  const handleDepartmentChange = (e) => {
+    const newDepartment = e.target.value;
+    setSelectedDepartment(newDepartment);
+    
+    // If in search mode, we need to re-run search with new department
+    if (isSearchMode && searchQuery) {
+      searchPolicies(searchQuery, newDepartment || null);
+    }
   };
-  
-  if (loading) {
-    return <div className="loading">جاري تحميل البيانات...</div>;
-  }
-  
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-  
-  const groupedData = groupedPolicies();
-  
+
+  // In search mode, don't apply additional filtering - the API already filtered by department
+  const displayedPolicies = isSearchMode 
+    ? policies 
+    : selectedDepartment
+      ? policies.filter(policy => policy.department && policy.department._id === selectedDepartment)
+      : policies;
+
+  const AddPolicyButton = (
+    <Link to="/add-policy">
+      <Button variant="primary">
+        <FaPlus style={{ marginLeft: '5px' }} /> 
+        إضافة سياسة جديدة
+      </Button>
+    </Link>
+  );
+
   return (
-    <div className="policy-list-container">
-      {/* Header */}
-      <header className="header">
-        <h1>السياسات و الإجراءات</h1>
-        <div className="user-menu">
-          <span className="user-name">{auth?.user?.name || 'المستخدم'}</span>
-          <button onClick={() => auth.logout()} className="logout-btn">تسجيل خروج</button>
-        </div>
-      </header>
+    <PageLayout 
+      title="قائمة السياسات" 
+      actions={AddPolicyButton}
+    >
+      {/* Search component */}
+      <SearchBar onSearch={handleSearch} />
       
-      {/* Stats Cards */}
-      <div className="stats-container">
-        <div className="stat-card">
-          <div className="stat-title">عدد السياسات</div>
-          <div className="stat-value">{stats?.total || 0}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-title">السياسات السارية</div>
-          <div className="stat-value">{stats?.active || 0}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-title">سياسات تحتاج تحديث</div>
-          <div className="stat-value">{stats?.needsUpdate || 0}</div>
-        </div>
-      </div>
+      {/* Statistics component */}
+      <Statistics departmentId={selectedDepartment} />
       
-      {/* Search and Filter */}
-      <div className="search-filter-container">
-        <form className="search-box" onSubmit={handleSearch}>
-          <input 
-            type="text" 
-            className="search-input" 
-            placeholder="كلمة البحث" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <button type="submit" className="search-button">
-            بحث
-          </button>
-        </form>
-        
-        <select 
-          className="department-select"
+      {/* Department filter */}
+      <div className="policy-filters">
+        <label htmlFor="department-filter">تصفية حسب الإدارة:</label>
+        <select
+          id="department-filter"
           value={selectedDepartment}
-          onChange={(e) => setSelectedDepartment(e.target.value)}
+          onChange={handleDepartmentChange}
+          className="department-select"
         >
-          <option value="all">جميع الإدارات</option>
-          {departments && departments.map(dept => (
-            <option key={dept._id} value={dept._id}>
-              {dept.name}
-            </option>
+          <option value="">جميع الإدارات</option>
+          {departments.map(dept => (
+            <option key={dept._id} value={dept._id}>{dept.name}</option>
           ))}
         </select>
         
-        <button className="add-button" onClick={handleAddPolicy}>
-          إضافة سياسة
-        </button>
+        {isSearchMode && (
+          <div className="search-info">
+            <span>نتائج البحث عن: {searchQuery}</span>
+            <Button 
+              variant="secondary" 
+              size="small" 
+              onClick={() => {
+                console.log('Clear search clicked');
+                setIsSearchMode(false);
+                setSearchQuery('');
+                refreshPolicies();
+              }}
+            >
+              إلغاء البحث
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Error message */}
+      {error && <ErrorMessage message={error} onRetry={refreshPolicies} />}
       
-      {/* Policy Table */}
-      {filteredPolicies.length === 0 ? (
-        <div className="no-policies">
-          لا توجد سياسات متطابقة مع معايير البحث
-        </div>
+      {/* Loading or no data states */}
+      {loading ? (
+        <Loading />
+      ) : displayedPolicies.length === 0 ? (
+        <EmptyState 
+          message={isSearchMode ? 'لا توجد نتائج مطابقة للبحث.' : 'لا توجد سياسات متاحة.'}
+          icon={<FaSearch />}
+        />
       ) : (
-        <div className="policy-table-container">
+        <div className="table-responsive">
           <table className="policy-table">
             <thead>
               <tr>
                 <th>اسم السياسة</th>
+                <th>الإدارة</th>
                 <th>تاريخ الاعتماد</th>
-                <th>صلاحية الاعتماد</th>
-                <th>تاريخ المراجعة</th>
-                <th>سريان</th>
+                <th>تاريخ انتهاء الصلاحية</th>
+                <th>الحالة</th>
+                <th>المستندات</th>
                 <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody>
-              {Object.keys(groupedData).map(deptId => (
-                <React.Fragment key={deptId}>
-                  {/* Department Row */}
-                  <tr 
-                    className={`department-row ${expandedDepartments[deptId] ? 'expanded' : ''}`}
-                    onClick={() => toggleDepartment(deptId)}
-                  >
-                    <td colSpan="6">
-                      <div className="department-header">
-                        <span className="department-name">{groupedData[deptId].name}</span>
-                        <span className="expand-icon">{expandedDepartments[deptId] ? '▼' : '►'}</span>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  {/* Policy Rows */}
-                  {expandedDepartments[deptId] && groupedData[deptId].policies.map(policy => {
-                    const isExpired = isPolicyExpired(policy.reviewDate);
+              {displayedPolicies.map(policy => (
+                <tr key={policy._id} className={policy.status === 'expired' ? 'expired' : ''}>
+                  <td>{policy.name}</td>
+                  <td>{policy.department ? policy.department.name : 'غير محدد'}</td>
+                  <td>{new Date(policy.approvalDate).toLocaleDateString('ar-SA')}</td>
+                  <td>{new Date(policy.approvalValidity).toLocaleDateString('ar-SA')}</td>
+                  <td>
+                    <StatusBadge status={policy.status} />
+                  </td>
+                  <td className="document-actions">
+                    {policy.wordFileUrl && (
+                      <button 
+                        className="doc-button word"
+                        onClick={() => downloadPolicyFile(policy._id, 'word')}
+                        title="تحميل ملف Word"
+                      >
+                        <FaFileWord />
+                      </button>
+                    )}
                     
-                    return (
-                      <tr key={policy._id} className={`policy-row ${isExpired ? 'expired' : ''}`}>
-                        <td className="policy-name">{policy.name}</td>
-                        <td>{new Date(policy.approvalDate).toLocaleDateString('ar-SA')}</td>
-                        <td>{policy.approvalAuthority}</td>
-                        <td className={isExpired ? 'expired-date' : ''}>
-                          {new Date(policy.reviewDate).toLocaleDateString('ar-SA')}
-                          {isExpired && <span className="expired-tag">منتهي</span>}
-                        </td>
-                        <td>
-                          <span className={`status-badge ${policy.isActive ? 'active' : 'inactive'}`}>
-                            {policy.isActive ? 'ساري' : 'غير ساري'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="action-buttons">
-                            <button 
-                              className="view-btn" 
-                              onClick={() => handleViewPolicy(policy._id)}
-                              title="عرض السياسة"
-                            >
-                              <i className="fa fa-eye"></i>
-                            </button>
-                            <button 
-                              className="edit-btn" 
-                              onClick={() => handleEditPolicy(policy._id)}
-                              title="تعديل السياسة"
-                            >
-                              <i className="fa fa-edit"></i>
-                            </button>
-                            <button 
-                              className="delete-btn"
-                              onClick={() => handleDeletePolicy(policy._id)}
-                              title="حذف السياسة"
-                            >
-                              <i className="fa fa-trash"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </React.Fragment>
+                    {policy.pdfFileUrl && (
+                      <button 
+                        className="doc-button pdf"
+                        onClick={() => downloadPolicyFile(policy._id, 'pdf')}
+                        title="تحميل ملف PDF"
+                      >
+                        <FaFilePdf />
+                      </button>
+                    )}
+                  </td>
+                  <td className="row-actions">
+                    <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
+                      <FaEdit />
+                    </Link>
+                    <button 
+                      className="delete-btn" 
+                      onClick={() => handleDeletePolicy(policy._id)}
+                      title="حذف"
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      
-      {/* Watermark */}
-      <div className="watermark">
-        <img src="/masar-logo.png" alt="Masar" />
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 
