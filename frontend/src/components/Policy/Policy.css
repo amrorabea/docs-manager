@@ -339,3 +339,239 @@ body {
 .watermark img {
   max-width: 200px;
 }
+
+/* PolicyView.css */
+.policy-view-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  direction: rtl;
+}
+
+.policy-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.policy-title {
+  font-size: 24px;
+  color: #333;
+  margin: 0;
+}
+
+.policy-status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.status-valid {
+  background-color: #e6f7e6;
+  color: #2e7d32;
+}
+
+.status-expired {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-draft {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.policy-details {
+  margin-bottom: 30px;
+}
+
+.detail-section {
+  margin-bottom: 25px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.section-title {
+  font-size: 18px;
+  color: #555;
+  margin-top: 0;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.detail-item {
+  flex: 1;
+  min-width: 250px;
+  margin-bottom: 10px;
+}
+
+.detail-label {
+  font-weight: bold;
+  color: #666;
+  margin-left: 8px;
+}
+
+.detail-value {
+  color: #333;
+}
+
+.files-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.file-link {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.file-link:hover {
+  background-color: #f5f5f5;
+  border-color: #aaa;
+}
+
+.word-file {
+  color: #2b579a;
+}
+
+.pdf-file {
+  color: #e53935;
+}
+
+.file-icon {
+  width: 24px;
+  height: 24px;
+  margin-left: 10px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.word-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232b579a"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6zM9.5 10.5L8 17h1.5l.375-1.5h1.75L12 17h1.5l-1.5-6.5H9.5zm.75 3.5l.5-2h.5l.5 2h-1.5z"/></svg>');
+}
+
+.pdf-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23e53935"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>');
+}
+
+.no-file {
+  padding: 12px 20px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  color: #999;
+  font-style: italic;
+}
+
+.policy-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.edit-btn, .back-btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 0.2s ease;
+}
+
+.edit-btn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+}
+
+.edit-btn:hover {
+  background-color: #388e3c;
+}
+
+.back-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.back-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error-container, .not-found-container {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-message {
+  color: #d32f2f;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.retry-btn {
+  padding: 10px 20px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-btn:hover {
+  background-color: #e0e0e0;
+}
+
+@media (max-width: 768px) {
+  .policy-view-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .policy-status {
+    margin-top: 10px;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+  }
+  
+  .policy-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .edit-btn, .back-btn {
+    width: 100%;
+  }
+}
