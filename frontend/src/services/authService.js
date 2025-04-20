@@ -1,18 +1,6 @@
 import axios from './api';
 import { jwtDecode } from 'jwt-decode';
 
-// Immediately check if we should be clearing cookies on startup
-(function checkAndClearOnLoad() {
-  // Check if user has explicitly logged in
-  const hasExplicitlyLoggedIn = localStorage.getItem('hasLoggedIn') === 'true';
-  
-  // If no explicit login, clear everything to prevent auto-refresh attempts
-  if (!hasExplicitlyLoggedIn) {
-    console.log('No explicit login detected on page load - clearing all auth cookies');
-    clearAuthData();
-  }
-})();
-
 // Utility function to clear all authentication-related data
 export const clearAuthData = () => {
   console.log('Clearing all authentication data');
@@ -107,6 +95,21 @@ export const clearAuthData = () => {
   console.log('All authentication data cleared');
 };
 
+// Function to check and clear auth data on page load
+const checkAndClearOnLoad = () => {
+  // Check if user has explicitly logged in
+  const hasExplicitlyLoggedIn = localStorage.getItem('hasLoggedIn') === 'true';
+  
+  // If no explicit login, clear everything to prevent auto-refresh attempts
+  if (!hasExplicitlyLoggedIn) {
+    console.log('No explicit login detected on page load - clearing all auth cookies');
+    clearAuthData();
+  }
+};
+
+// Immediately run the check function
+checkAndClearOnLoad();
+
 export const login = async (credentials) => {
   try {
     const response = await axios.post('/auth/handleLogin', credentials);
@@ -114,14 +117,17 @@ export const login = async (credentials) => {
     if (response.data && response.data.accessToken) {
       const accessToken = response.data.accessToken;
 
-      // Decode the token to extract user info (like email, role)
-      const decodedUser = jwtDecode(accessToken); // Ensure 'role' is in the decoded data
+      // Decode the token to extract user info
+      const decodedUser = jwtDecode(accessToken);
 
-      console.log('Decoded user:', decodedUser);  // Verify that 'role' is present
+      console.log('Decoded user:', decodedUser);
 
       // Store token and user info in localStorage
       localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('user', JSON.stringify(decodedUser));  // Store full user info, including role
+      localStorage.setItem('user', JSON.stringify(decodedUser));
+      
+      // Set the flag to indicate explicit login
+      localStorage.setItem('hasLoggedIn', 'true');
 
       return {
         accessToken,
@@ -136,7 +142,6 @@ export const login = async (credentials) => {
     throw error;
   }
 };
-
 
 export const register = async (userData) => {
   try {
@@ -160,9 +165,9 @@ export const refresh = async () => {
       console.log('New access token received, updating localStorage');
       localStorage.setItem('accessToken', accessToken);
 
-      // Decode the token to get user info (like email, role)
+      // Decode the token to get user info
       const decoded = jwtDecode(accessToken);
-      localStorage.setItem('user', JSON.stringify(decoded));  // Store the updated user info
+      localStorage.setItem('user', JSON.stringify(decoded));
 
       return {
         ...response.data,
@@ -174,18 +179,17 @@ export const refresh = async () => {
     }
   } catch (error) {
     console.error('Token refresh error:', error.response?.data || error.message);
-    clearAuthData(); // Use the utility function here
+    clearAuthData();
     throw error;
   }
 };
-
 
 export const logout = async () => {
   try {
     console.log('Logging out user');
     await axios.get('/logout/handleLogout');
     
-    // Use the comprehensive utility function to clear all auth data
+    // Clear all auth data
     clearAuthData();
     
   } catch (error) {

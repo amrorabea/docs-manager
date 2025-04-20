@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { login as apiLogin, logout as apiLogout, refresh, clearAuthData } from '../services/authService';
 import { jwtDecode } from 'jwt-decode';
 
-
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
@@ -24,8 +23,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // const isAdmin = auth?.user?.role === 'admin';
-  const isAdmin = true;
+  // This should be dynamically determined based on the user's role
+  const isAdmin = auth?.user?.role === 'admin';
 
   console.log("Auth in context: ", auth);
 
@@ -106,28 +105,15 @@ export const AuthProvider = ({ children }) => {
       setError(null);
   
       const response = await apiLogin(credentials);
-      console.log("Login response:", response); // Log response from API login
   
       if (response?.accessToken) {
-        // Decode the token to extract user info (including role)
-        const decodedUser = jwtDecode(response.accessToken);
-        console.log("Decoded user:", decodedUser); // Log decoded user info (email, role, etc.)
-  
-        const authWithLogout = {
+        // Create auth state with user info from decoded token
+        const authState = {
           accessToken: response.accessToken,
-          user: decodedUser, // Include full user info here (including role)
-          logout: handleLogout
+          user: response.user,
         };
   
-        setAuth(authWithLogout);
-  
-        // Also store user info and access token in localStorage
-        localStorage.setItem('accessToken', response.accessToken);
-        localStorage.setItem('user', JSON.stringify(decodedUser));  // Store decoded user info
-        
-        // Set the flag to indicate explicit login
-        localStorage.setItem('hasLoggedIn', 'true');
-  
+        setAuth(authState);
         return response;
       } else {
         throw new Error('Login failed: No access token received');
@@ -155,13 +141,6 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // Always clear auth state on logout
       setAuth({});
-      
-      // Use the comprehensive utility function to clear all auth data
-      clearAuthData();
-      
-      // Clear the explicit login flag
-      localStorage.removeItem('hasLoggedIn');
-      
       setLoading(false);
     }
   }, [auth?.accessToken]);

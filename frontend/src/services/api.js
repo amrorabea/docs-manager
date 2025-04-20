@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { clearAuthData } from './authService';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -27,6 +26,26 @@ const pendingRequests = new Map();
 // Token refresh state
 let refreshPromise = null;
 let isRedirecting = false;
+
+// Function to clear auth data (used for auth failures)
+const clearAuthData = () => {
+  // Clear local storage
+  const storageTypes = [localStorage, sessionStorage];
+  storageTypes.forEach(storage => {
+    storage.removeItem('accessToken');
+    storage.removeItem('user');
+    storage.removeItem('isAdmin');
+    storage.removeItem('lastLogin');
+    storage.removeItem('authState');
+    storage.removeItem('hasLoggedIn');
+  });
+
+  // Basic cookie clearing (for basic handling of auth failures)
+  document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;';
+  
+  // Clear cache
+  cache.clear();
+};
 
 // Add request interceptor to attach the access token to all private requests
 axiosPrivate.interceptors.request.use(
@@ -175,10 +194,5 @@ export const hasValidToken = () => {
   return !!localStorage.getItem('accessToken');
 };
 
-// Clear authentication
-export const clearAuth = () => {
-  clearAuthData();
-  clearCache();
-};
-
+// Export the default axios instance for public routes
 export default axiosPublic;
