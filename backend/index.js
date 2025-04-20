@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const verifyJWT = require('./middleware/verifyJWT');
 require('dotenv').config();
+const helmet = require('helmet');
+const compression = require('compression');
+app.use(helmet());
+app.use(compression());
 
 const app = express();
 app.use(cors({
@@ -16,7 +20,12 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+  maxPoolSize: 10,
+  minPoolSize: 5,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+})
     .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
     .catch((err) => console.log(err));
 
