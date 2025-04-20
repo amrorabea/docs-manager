@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate';
 import './Users.css';
 
@@ -8,13 +7,14 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    isAdmin: false
+    role: 'user',
+    password: '' // Added for new user creation
   });
   const axiosPrivate = useAxiosPrivate();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
@@ -75,20 +75,34 @@ const Users = () => {
 
   // Function to start editing a user
   const handleEditUser = (user) => {
+    setIsAddingUser(false);
     setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
-      isAdmin: user.isAdmin
+      role: user.role || (user.isAdmin ? 'admin' : 'user'),
+      password: '' // Clear password field when editing
+    });
+  };
+
+  // Function to start adding a new user
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setIsAddingUser(true);
+    setFormData({
+      name: '',
+      email: '',
+      role: 'user',
+      password: ''
     });
   };
 
   // Function to handle form input changes
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     });
   };
 
@@ -98,26 +112,62 @@ const Users = () => {
     
     try {
       setLoading(true);
-      await axiosPrivate.put(`/api/users/update/${editingUser._id}`, formData);
-      setEditingUser(null);
+      
+      // Prepare user data
+      const userData = {
+        ...formData,
+        isAdmin: formData.role === 'admin'
+      };
+      
+      if (isAddingUser) {
+        // Create new user
+        if (!userData.password) {
+          alert('كلمة المرور مطلوبة لإنشاء مستخدم جديد');
+          setLoading(false);
+          return;
+        }
+        
+        await axiosPrivate.post('/api/users/register', userData);
+        setIsAddingUser(false);
+      } else if (editingUser) {
+        // Update existing user
+        // If password is empty, remove it from the request
+        if (!userData.password) {
+          delete userData.password;
+        }
+        
+        await axiosPrivate.put(`/api/users/update/${editingUser._id}`, userData);
+        setEditingUser(null);
+      }
+      
       fetchUsers();
     } catch (err) {
-      console.error('Error updating user:', err);
-      alert('فشل في تحديث المستخدم. الرجاء المحاولة مرة أخرى.');
+      console.error('Error saving user:', err);
+      
+      let errorMessage = 'فشل في حفظ المستخدم. الرجاء المحاولة مرة أخرى.';
+      
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response && err.response.status === 409) {
+        errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
+      }
+      
+      alert(errorMessage);
       setLoading(false);
     }
   };
 
-  // Function to cancel editing
-  const handleCancelEdit = () => {
+  // Function to cancel editing/adding
+  const handleCancel = () => {
     setEditingUser(null);
+    setIsAddingUser(false);
   };
 
   const retryFetch = () => {
     fetchUsers();
   };
 
-  if (loading && !editingUser) return <div className="loading">جاري التحميل...</div>;
+  if (loading && !editingUser && !isAddingUser) return <div className="loading">جاري التحميل...</div>;
   
   if (error) return (
     <div className="error-container">
@@ -126,11 +176,13 @@ const Users = () => {
     </div>
   );
 
-  // If we're editing a user, show the edit form
-  if (editingUser) {
+  // If we're editing or adding a user, show the form
+  if (editingUser || isAddingUser) {
     return (
       <div className="edit-user-container">
-        <h1 className="edit-user-title">تعديل المستخدم</h1>
+        <h1 className="edit-user-title">
+          {isAddingUser ? 'إضافة مستخدم جديد' : 'تعديل المستخدم'}
+        </h1>
         
         <form onSubmit={handleSaveUser} className="user-form">
           <div className="form-group">
@@ -159,16 +211,33 @@ const Users = () => {
             />
           </div>
           
-          <div className="form-group checkbox-group">
-            <label htmlFor="isAdmin">مدير النظام</label>
+          <div className="form-group">
+            <label htmlFor="password">
+              كلمة المرور {!isAddingUser && '(اتركها فارغة إذا لم ترغب في تغييرها)'}
+            </label>
             <input
-              type="checkbox"
-              id="isAdmin"
-              name="isAdmin"
-              checked={formData.isAdmin}
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
               onChange={handleInputChange}
-              className="form-checkbox"
+              required={isAddingUser} // Only required when adding a new user
+              className="form-control"
             />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="role">نوع المستخدم</label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              className="form-control"
+            >
+              <option value="user">مستخدم</option>
+              <option value="admin">مدير</option>
+            </select>
           </div>
           
           <div className="form-actions">
@@ -177,12 +246,12 @@ const Users = () => {
               className="save-btn"
               disabled={loading}
             >
-              {loading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+              {loading ? 'جاري الحفظ...' : 'حفظ'}
             </button>
             <button 
               type="button" 
               className="cancel-btn" 
-              onClick={handleCancelEdit}
+              onClick={handleCancel}
               disabled={loading}
             >
               إلغاء
@@ -198,7 +267,9 @@ const Users = () => {
       <h1 className="users-title">إدارة المستخدمين</h1>
       
       <div className="users-actions">
-        <Link to="/users/new" className="add-user-btn">إضافة مستخدم جديد</Link>
+        <button onClick={handleAddUser} className="add-user-btn">
+          إضافة مستخدم جديد
+        </button>
       </div>
       
       <div className="users-table-container">
@@ -218,7 +289,7 @@ const Users = () => {
                 <tr key={user._id}>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
-                  <td>{user.isAdmin ? 'مدير' : 'مستخدم'}</td>
+                  <td>{user.role === 'admin' || user.isAdmin ? 'مدير' : 'مستخدم'}</td>
                   <td>{new Date(user.createdAt).toLocaleDateString('ar-SA')}</td>
                   <td className="actions">
                     <button 
