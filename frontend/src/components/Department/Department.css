@@ -1,0 +1,150 @@
+.department-container {
+    padding: 20px;
+  }
+  
+  .department-actions {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .add-department-btn {
+    padding: 10px 15px;
+    background-color: #00a884;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .add-department-btn:hover {
+    background-color: #008f6f;
+  }
+  
+  .department-form-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .form-subtitle {
+    margin-bottom: 15px;
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .department-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-error {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .save-btn {
+    padding: 8px 16px;
+    background-color: #00a884;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .save-btn:hover {
+    background-color: #008f6f;
+  }
+  
+  .cancel-btn {
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .cancel-btn:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .departments-list {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  
+  .department-header-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    background-color: #f5f5f5;
+    padding: 15px;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .department-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+  }
+  
+  .department-row:last-child {
+    border-bottom: none;
+  }
+  
+  .department-row-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .edit-btn, .delete-btn {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .edit-btn {
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+  }
+  
+  .delete-btn {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+  }
+  
+  .no-departments {
+    padding: 30px;
+    text-align: center;
+    color: #777;
+  }
+  
+  .department-form-wrapper {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+  }

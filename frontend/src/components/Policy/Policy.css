@@ -1,0 +1,214 @@
+.delete-btn {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+  }
+  
+  .no-policies {
+    padding: 30px;
+    text-align: center;
+    color: #777;
+  }
+  
+  /* Loading and Error States */
+  .loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    font-size: 18px;
+    color: #555;
+  }
+  
+  .error {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  
+  /* Policy Form */
+  .policy-form-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .form-title {
+    margin-bottom: 30px;
+    color: #333;
+    font-weight: 600;
+    text-align: center;
+  }
+  
+  .policy-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 0;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: 'Cairo', sans-serif;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .file-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .file-input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  .existing-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+  }
+  
+  .save-btn {
+    padding: 10px 20px;
+    background-color: #00a884;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: 'Cairo', sans-serif;
+  }
+  
+  .save-btn:hover {
+    background-color: #008f6f;
+  }
+  
+  .save-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .cancel-btn {
+    padding: 10px 20px;
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: 'Cairo', sans-serif;
+  }
+  
+  .cancel-btn:hover {
+    background-color: #e0e0e0;
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 992px) {
+    .policy-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .search-filter-container {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 15px;
+    }
+    
+    .search-box {
+      width: 100%;
+    }
+    
+    .search-input {
+      flex: 1;
+    }
+    
+    .department-select {
+      width: 100%;
+    }
+    
+    .add-policy-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .policy-stats {
+      grid-template-columns: 1fr;
+    }
+    
+    .policy-header, .policy-item {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    
+    .policy-header div:not(:first-child), 
+    .policy-item div:not(:first-child) {
+      display: none;
+    }
+    
+    .policy-header div:first-child, 
+    .policy-item div:first-child {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .policy-item {
+      position: relative;
+      padding-bottom: 50px;
+    }
+    
+    .policy-actions {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+    }
+    
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
