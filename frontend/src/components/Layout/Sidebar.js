@@ -30,7 +30,6 @@ const Sidebar = () => {
       [menu]: !prev[menu]
     }));
   };
-
   // Fallback values for user display
   const userInitial = auth?.user?.fullName?.charAt(0) || 
                      auth?.user?.username?.charAt(0) || 
@@ -40,7 +39,8 @@ const Sidebar = () => {
                   auth?.user?.username || 
                   'مستخدم';
                   
-  const userRole = auth?.user?.role === 'admin' ? 'مدير النظام' : 'مستخدم';
+  // const userRole = auth?.user?.role === 'admin' ? 'مدير النظام' : 'مستخدم';
+  const userRole = 'admin';
 
   return (
     <aside className="sidebar">

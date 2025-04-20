@@ -9,6 +9,8 @@ import PolicyList from './components/Policy/PolicyList';
 import PolicyForm from './components/Policy/PolicyForm';
 import DepartmentList from './components/Department/DepartmentList';
 import RequireAuth from './components/Auth/RequireAuth';
+import Users from './components/User/Users';
+import UserDetails from './components/User/UserDetails';
 import './App.css';
 
 function App() {
@@ -25,6 +27,8 @@ function App() {
                 <Route path="add-policy" element={<PolicyForm />} />
                 <Route path="edit-policy/:id" element={<PolicyForm />} />
                 <Route path="departments" element={<DepartmentList />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/users/:email" element={<UserDetails />} />
               </Route>
             </Route>
           </Routes>

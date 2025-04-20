@@ -1,24 +1,37 @@
 import axios from './api';
+import { jwtDecode } from 'jwt-decode';
+
 
 export const login = async (credentials) => {
   try {
-    console.log('Login credentials:', credentials);
     const response = await axios.post('/auth/handleLogin', credentials);
-    
-    // Store the access token in localStorage when login is successful
+
     if (response.data && response.data.accessToken) {
-      console.log('Access token received, storing in localStorage');
-      localStorage.setItem('accessToken', response.data.accessToken);
+      const accessToken = response.data.accessToken;
+
+      // Decode the token to extract user info (like email, role)
+      const decodedUser = jwtDecode(accessToken); // Ensure 'role' is in the decoded data
+
+      console.log('Decoded user:', decodedUser);  // Verify that 'role' is present
+
+      // Store token and user info in localStorage
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('user', JSON.stringify(decodedUser));  // Store full user info, including role
+
+      return {
+        accessToken,
+        user: decodedUser
+      };
     } else {
       console.warn('No access token received in login response');
+      return {};
     }
-    
-    return response.data;
   } catch (error) {
     console.error('Login error:', error.response?.data || error.message);
     throw error;
   }
 };
+
 
 export const register = async (userData) => {
   try {
@@ -37,22 +50,31 @@ export const refresh = async () => {
     console.log('Attempting to refresh token');
     const response = await axios.get('/refresh/handleRefreshToken');
     
-    // Update the stored access token with the new one
     if (response.data && response.data.accessToken) {
+      const accessToken = response.data.accessToken;
       console.log('New access token received, updating localStorage');
-      localStorage.setItem('accessToken', response.data.accessToken);
+      localStorage.setItem('accessToken', accessToken);
+
+      // Decode the token to get user info (like email, role)
+      const decoded = jwtDecode(accessToken);
+      localStorage.setItem('user', JSON.stringify(decoded));  // Store the updated user info
+
+      return {
+        ...response.data,
+        user: decoded
+      };
     } else {
       console.warn('No access token received in refresh response');
+      return null;
     }
-    
-    return response.data;
   } catch (error) {
     console.error('Token refresh error:', error.response?.data || error.message);
-    // If refresh fails, clear the token to force re-login
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
     throw error;
   }
 };
+
 
 export const logout = async () => {
   try {
