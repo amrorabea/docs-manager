@@ -11,6 +11,7 @@ import DepartmentList from './components/Department/DepartmentList';
 import RequireAuth from './components/Auth/RequireAuth';
 import Users from './components/User/Users';
 import UserDetails from './components/User/UserDetails';
+import Settings from './components/Settings/Settings';
 import './App.css';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
                 <Route path="departments" element={<DepartmentList />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/users/:email" element={<UserDetails />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>
           </Routes>

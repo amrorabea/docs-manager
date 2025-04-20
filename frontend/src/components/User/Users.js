@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate';
+import Button from '../UI/Button';
 import './Users.css';
 
 const Users = () => {
@@ -267,9 +268,12 @@ const Users = () => {
       <h1 className="users-title">إدارة المستخدمين</h1>
       
       <div className="users-actions">
-        <button onClick={handleAddUser} className="add-user-btn">
+        <Button 
+          onClick={handleAddUser} 
+          variant="primary"
+        >
           إضافة مستخدم جديد
-        </button>
+        </Button>
       </div>
       
       <div className="users-table-container">

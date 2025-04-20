@@ -1,0 +1,155 @@
+.settings-container {
+  padding: 20px;
+  direction: rtl;
+}
+
+.settings-title {
+  margin-bottom: 20px;
+  color: #333;
+  text-align: right;
+}
+
+.settings-content {
+  display: flex;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.settings-sidebar {
+  width: 250px;
+  background-color: #f8f9fa;
+  border-left: 1px solid #eee;
+  min-height: 500px;
+}
+
+.settings-tabs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.settings-tab {
+  padding: 15px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.settings-tab:hover {
+  background-color: #f0f0f0;
+}
+
+.settings-tab.active {
+  background-color: #00a884;
+  color: white;
+}
+
+.tab-icon {
+  margin-left: 10px;
+  font-size: 18px;
+}
+
+.settings-panel {
+  flex: 1;
+  padding: 20px;
+}
+
+.panel-title {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  color: #333;
+  font-size: 18px;
+}
+
+.panel-content {
+  padding: 10px 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-help {
+  font-size: 13px;
+  color: #777;
+  margin-top: 5px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-left: 10px;
+  margin-right: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-group label {
+  margin-bottom: 0;
+}
+
+.checkbox-group .form-help {
+  width: 100%;
+  margin-top: 5px;
+  margin-right: 28px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: 'Cairo', sans-serif;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #00a884;
+  box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.2);
+}
+
+.form-control:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+.form-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .settings-content {
+    flex-direction: column;
+  }
+  
+  .settings-sidebar {
+    width: 100%;
+    min-height: auto;
+    border-left: none;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .settings-tab {
+    padding: 12px 15px;
+  }
+} 
