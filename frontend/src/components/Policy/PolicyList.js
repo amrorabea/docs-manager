@@ -21,7 +21,7 @@ const PolicyList = () => {
   
   // Get context data
   const { policies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
-  const { user, logout } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const handleSearch = async (query) => {
     try {
@@ -76,14 +76,14 @@ const PolicyList = () => {
       ? policies.filter(policy => policy.department && policy.department._id === selectedDepartment)
       : policies;
 
-  const AddPolicyButton = (
+  const AddPolicyButton = isAdmin ? (
     <Link to="/add-policy">
       <Button variant="primary">
         <FaPlus style={{ marginLeft: '5px' }} /> 
         إضافة سياسة جديدة
       </Button>
     </Link>
-  );
+  ) : null;
 
   return (
     <PageLayout 
@@ -187,16 +187,20 @@ const PolicyList = () => {
                     )}
                   </td>
                   <td className="row-actions">
-                    <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
-                      <FaEdit />
-                    </Link>
-                    <button 
-                      className="delete-btn" 
-                      onClick={() => handleDeletePolicy(policy._id)}
-                      title="حذف"
-                    >
-                      <FaTrash />
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
+                          <FaEdit />
+                        </Link>
+                        <button 
+                          className="delete-btn" 
+                          onClick={() => handleDeletePolicy(policy._id)}
+                          title="حذف"
+                        >
+                          <FaTrash />
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate';
+import useAuth from '../../hooks/useAuth';
 import Button from '../UI/Button';
 import './Users.css';
 
@@ -16,6 +17,7 @@ const Users = () => {
     password: '' // Added for new user creation
   });
   const axiosPrivate = useAxiosPrivate();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -268,12 +270,14 @@ const Users = () => {
       <h1 className="users-title">إدارة المستخدمين</h1>
       
       <div className="users-actions">
-        <Button 
-          onClick={handleAddUser} 
-          variant="primary"
-        >
-          إضافة مستخدم جديد
-        </Button>
+        {isAdmin && (
+          <Button 
+            onClick={handleAddUser} 
+            variant="primary"
+          >
+            إضافة مستخدم جديد
+          </Button>
+        )}
       </div>
       
       <div className="users-table-container">
@@ -296,18 +300,24 @@ const Users = () => {
                   <td>{user.role === 'admin' || user.isAdmin ? 'مدير' : 'مستخدم'}</td>
                   <td>{new Date(user.createdAt).toLocaleDateString('ar-SA')}</td>
                   <td className="actions">
-                    <button 
-                      className="edit-btn" 
-                      onClick={() => handleEditUser(user)}
-                    >
-                      تعديل
-                    </button>
-                    <button 
-                      className="delete-btn" 
-                      onClick={() => handleDeleteUser(user._id)}
-                    >
-                      حذف
-                    </button>
+                    {isAdmin ? (
+                      <>
+                        <button 
+                          className="edit-btn" 
+                          onClick={() => handleEditUser(user)}
+                        >
+                          تعديل
+                        </button>
+                        <button 
+                          className="delete-btn" 
+                          onClick={() => handleDeleteUser(user._id)}
+                        >
+                          حذف
+                        </button>
+                      </>
+                    ) : (
+                      <span className="user-info-text">للإدارة فقط</span>
+                    )}
                   </td>
                 </tr>
               ))
@@ -319,6 +329,12 @@ const Users = () => {
           </tbody>
         </table>
       </div>
+      
+      {!isAdmin && !users.length && (
+        <div className="admin-notice">
+          <p>فقط المسؤولون يمكنهم إضافة أو تعديل أو حذف المستخدمين.</p>
+        </div>
+      )}
     </div>
   );
 };

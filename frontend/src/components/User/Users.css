@@ -104,3 +104,18 @@
     display: flex;
     justify-content: flex-end;
   }
+
+  .user-info-text {
+    color: #888;
+    font-size: 0.9rem;
+    font-style: italic;
+  }
+
+  .admin-notice {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    text-align: center;
+    color: #6c757d;
+  }

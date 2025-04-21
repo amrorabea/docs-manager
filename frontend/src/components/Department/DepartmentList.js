@@ -1,10 +1,12 @@
 import React, { useState, useContext } from 'react';
 import PolicyContext from '../../context/PolicyContext';
+import useAuth from '../../hooks/useAuth';
 import { createDepartment, updateDepartment, deleteDepartment } from '../../services/departmentService';
 import './Department.css';
 
 const DepartmentList = () => {
   const { departments, refreshDepartments, loading, error: contextError } = useContext(PolicyContext);
+  const { isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [editingId, setEditingId] = useState(null);
@@ -131,17 +133,19 @@ const DepartmentList = () => {
       {contextError && <div className="error-message">{contextError}</div>}
       
       <div className="department-actions">
-        <button 
-          className="add-department-btn" 
-          onClick={() => {
-            setFormData({ name: '', description: '' });
-            setEditingId(null);
-            setFormError('');
-            setShowForm(!showForm);
-          }}
-        >
-          {showForm ? 'إلغاء' : 'إضافة إدارة'}
-        </button>
+        {isAdmin && (
+          <button 
+            className="add-department-btn" 
+            onClick={() => {
+              setFormData({ name: '', description: '' });
+              setEditingId(null);
+              setFormError('');
+              setShowForm(!showForm);
+            }}
+          >
+            {showForm ? 'إلغاء' : 'إضافة إدارة'}
+          </button>
+        )}
       </div>
       
       {showForm && (
@@ -216,23 +220,35 @@ const DepartmentList = () => {
             <div key={department._id} className="department-row">
               <div className="department-name">{department.name}</div>
               <div className="department-row-actions">
-                <button 
-                  className="edit-btn" 
-                  onClick={() => handleEdit(department)}
-                >
-                  تعديل
-                </button>
-                <button 
-                  className="delete-btn" 
-                  onClick={() => handleDelete(department._id)}
-                >
-                  حذف
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button 
+                      className="edit-btn" 
+                      onClick={() => handleEdit(department)}
+                    >
+                      تعديل
+                    </button>
+                    <button 
+                      className="delete-btn" 
+                      onClick={() => handleDelete(department._id)}
+                    >
+                      حذف
+                    </button>
+                  </>
+                ) : (
+                  <span className="user-info-text">للإدارة فقط</span>
+                )}
               </div>
             </div>
           ))
         )}
       </div>
+      
+      {!isAdmin && !departments.length && (
+        <div className="admin-notice">
+          <p>فقط المسؤولون يمكنهم إضافة أو تعديل أو حذف الإدارات.</p>
+        </div>
+      )}
     </div>
   );
 };

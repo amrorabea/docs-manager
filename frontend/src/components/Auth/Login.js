@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import './Auth.css';
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, error: authError, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the page user was trying to access before being redirected to login
+  const from = location.state?.from?.pathname || '/';
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Clear error when inputs change
+  useEffect(() => {
+    if (error) setError('');
+  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,12 +36,39 @@ const Login = () => {
     setError('');
     setLoading(true);
 
+    // Simple validation
+    if (!formData.email || !formData.password) {
+      setError('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Attempting to login with:', formData.email);
       await login(formData);
-      navigate('/');
+      // Navigate to the page they were trying to access, or home
+      navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      setError('فشل تسجيل الدخول. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
+      
+      // Set error message based on error response
+      let errorMessage = 'فشل تسجيل الدخول. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
+      
+      if (err.response) {
+        // If we have a server response with a message
+        if (err.response.data && err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.status === 401) {
+          errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+        } else if (err.response.status === 403) {
+          errorMessage = 'حسابك غير مفعل. الرجاء التواصل مع الإدارة.';
+        }
+      } else if (err.request) {
+        // If no response was received
+        errorMessage = 'لا يمكن الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -43,6 +80,7 @@ const Login = () => {
         <h2 className="auth-title">تسجيل الدخول</h2>
         
         {error && <div className="auth-error">{error}</div>}
+        {authError && !error && <div className="auth-error">{authError}</div>}
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -56,6 +94,7 @@ const Login = () => {
               required
               className="form-control"
               placeholder="أدخل بريدك الإلكتروني"
+              disabled={loading || authLoading}
             />
           </div>
           
@@ -70,15 +109,16 @@ const Login = () => {
               required
               className="form-control"
               placeholder="أدخل كلمة المرور"
+              disabled={loading || authLoading}
             />
           </div>
           
           <button 
             type="submit" 
             className="auth-button" 
-            disabled={loading}
+            disabled={loading || authLoading}
           >
-            {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+            {loading || authLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </button>
         </form>
         

@@ -46,14 +46,25 @@ const handleRefreshToken = async (req, res) => {
                 // Create new access token
                 const accessToken = jwt.sign(
                     {
-                        "email": foundEmail.email
+                        "email": foundEmail.email,
+                        "name": foundEmail.name,
+                        "role": foundEmail.role,
+                        "isAdmin": foundEmail.role === 'admin'
                     },
                     process.env.ACCESS_TOKEN_SECRET,
                     { expiresIn: '5m' }
                 );
                 
                 console.log('New access token created');
-                res.json({ accessToken });
+                res.json({ 
+                    accessToken,
+                    user: {
+                        email: foundEmail.email,
+                        name: foundEmail.name,
+                        role: foundEmail.role,
+                        isAdmin: foundEmail.role === 'admin'
+                    }
+                });
             }
         );
     } catch (error) {

@@ -121,6 +121,24 @@ axiosPrivate.interceptors.response.use(
 
     const originalRequest = error.config;
     
+    // Add code to detect network errors and transform them to a more user-friendly format
+    if (error.message && error.message.includes('Network Error')) {
+      console.error('Network error detected:', error);
+      return Promise.reject({
+        ...error,
+        response: {
+          status: 0,
+          data: { message: 'لا يمكن الاتصال بالخادم. تحقق من اتصالك بالإنترنت.' }
+        }
+      });
+    }
+    
+    // Handle error cases where error.config is undefined
+    if (!originalRequest) {
+      console.error('Request config missing in error object:', error);
+      return Promise.reject(error);
+    }
+    
     // If error is 401 (Unauthorized) and we haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -128,6 +146,7 @@ axiosPrivate.interceptors.response.use(
       try {
         // Use a single refresh promise to avoid multiple refresh requests
         if (!refreshPromise) {
+          console.log('Attempting to refresh token');
           refreshPromise = axiosPublic.get('/refresh/handleRefreshToken');
         }
         
@@ -137,6 +156,7 @@ axiosPrivate.interceptors.response.use(
         // Store the new access token
         const newAccessToken = response.data.accessToken;
         if (newAccessToken) {
+          console.log('Token refresh successful, retrying original request');
           localStorage.setItem('accessToken', newAccessToken);
           
           // Update the header for the original request
@@ -145,13 +165,28 @@ axiosPrivate.interceptors.response.use(
           // Retry the original request
           return axiosPrivate(originalRequest);
         } else {
+          console.error('Token refresh succeeded but no token was returned');
           handleAuthFailure();
           return Promise.reject(new Error('Authentication failed'));
         }
       } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
         refreshPromise = null;
         handleAuthFailure();
         return Promise.reject(refreshError);
+      }
+    }
+    
+    // If we have a 403 error (Forbidden)
+    if (error.response?.status === 403) {
+      console.log('Forbidden access detected, checking if user is logged in');
+      if (localStorage.getItem('accessToken')) {
+        // User is logged in but doesn't have permission
+        console.error('User is logged in but access is forbidden');
+      } else {
+        // User is not logged in, redirect to login
+        console.error('User is not logged in and access is forbidden');
+        handleAuthFailure();
       }
     }
     
@@ -175,10 +210,14 @@ export const clearCache = (urlPattern) => {
 
 // Handle authentication failures
 const handleAuthFailure = () => {
+  console.log('Authentication failure detected, clearing data and redirecting');
   clearAuthData();
   
   if (!isRedirecting && !window.location.pathname.includes('/login')) {
     isRedirecting = true;
+    
+    // Show a user-friendly message
+    alert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.');
     
     setTimeout(() => {
       window.location.href = '/login';

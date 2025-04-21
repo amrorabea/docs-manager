@@ -14,10 +14,14 @@
     background-color: #00a884;
     color: white;
     border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 150px;
   }
   
   .ui-button.primary:hover {
     background-color: #008f70;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
   
   .ui-button.secondary {
@@ -46,8 +50,9 @@
   }
   
   .ui-button.medium {
-    padding: 8px 16px;
+    padding: 12px 20px;
     font-size: 16px;
+    font-weight: 600;
   }
   
   .ui-button.large {

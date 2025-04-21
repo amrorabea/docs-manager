@@ -24,9 +24,15 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // This should be dynamically determined based on the user's role
-  const isAdmin = auth?.user?.role === 'admin';
-
+  // Check both role and isAdmin properties since the token might have either
+  const isAdmin = auth?.user?.role === 'admin' || auth?.user?.isAdmin === true;
+  
   console.log("Auth in context: ", auth);
+  console.log("User role check:", { 
+    role: auth?.user?.role,
+    isAdmin: auth?.user?.isAdmin,
+    isAdminResult: isAdmin
+  });
 
   // Store auth in localStorage whenever it changes
   useEffect(() => {
@@ -114,6 +120,10 @@ export const AuthProvider = ({ children }) => {
         };
   
         setAuth(authState);
+        
+        // Set the flag to indicate the user has explicitly logged in
+        localStorage.setItem('hasLoggedIn', 'true');
+        
         return response;
       } else {
         throw new Error('Login failed: No access token received');

@@ -10,17 +10,21 @@ const handleLogin = async (req, res) => {
     if (!foundEmail) return res.sendStatus(401); //Unauthorized
     const match = await bcrypt.compare(password, foundEmail.password);
     if (match) {
-        // create JWTs
+        // create JWTs with user data including role
         const accessToken = jwt.sign(
             {
-                "email": foundEmail.email
+                "email": foundEmail.email,
+                "name": foundEmail.name,
+                "role": foundEmail.role,
+                "isAdmin": foundEmail.role === 'admin'
             },
             process.env.ACCESS_TOKEN_SECRET,
             { expiresIn: '5m' }
         );
         const refreshToken = jwt.sign(
             {
-                "email": foundEmail.email
+                "email": foundEmail.email,
+                "role": foundEmail.role
             },
             process.env.REFRESH_TOKEN_SECRET,
             { expiresIn: '1d' }
@@ -34,7 +38,15 @@ const handleLogin = async (req, res) => {
         res.cookie('jwt', refreshToken, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 24 * 60 * 60 * 1000 });
 
         // Send authorization access token to user
-        res.json({ accessToken });
+        res.json({ 
+            accessToken,
+            user: {
+                email: foundEmail.email,
+                name: foundEmail.name,
+                role: foundEmail.role,
+                isAdmin: foundEmail.role === 'admin'
+            }
+        });
 
     } else {
         res.status(400).json({ 'message': 'password are required.' });
