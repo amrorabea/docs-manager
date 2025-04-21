@@ -1,56 +1,40 @@
-import React, { useEffect } from 'react';
-import { useApi } from '../../hooks/useApi';
-import Card from '../UI/Card';
-import Loading from '../UI/Loading';
-import ErrorMessage from '../UI/ErrorMessage';
-import Button from '../UI/Button';
+import React, { useMemo } from 'react';
+import { usePolicyContext } from '../../hooks/usePolicyContext';
 import './Statistics.css';
 
 const Statistics = ({ departmentId }) => {
-  const { data: stats, loading, error, refetch } = useApi('/api/policies/stats', {
-    params: departmentId ? { departmentId } : null
-  });
-  
-  // Refresh stats when departmentId changes
-  useEffect(() => {
-    refetch();
-  }, [departmentId, refetch]);
-  
-  if (loading) return <Loading message="جاري تحميل الإحصائيات..." size="small" />;
-  
-  if (error) {
-    return <ErrorMessage message="حدث خطأ في تحميل الإحصائيات" onRetry={refetch} />;
-  }
-  
-  if (!stats) return null;
-  
+  const { policies } = usePolicyContext();
+
+  const stats = useMemo(() => {
+    const filteredPolicies = departmentId
+      ? policies.filter(policy => policy.department?._id === departmentId)
+      : policies;
+
+    return {
+      total: filteredPolicies.length,
+      active: filteredPolicies.filter(policy => policy.status === 'active').length,
+      expired: filteredPolicies.filter(policy => policy.status === 'expired').length
+    };
+  }, [policies, departmentId]);
+
   return (
-    <Card className="statistics-container">
-      <h3 className="statistics-title">إحصائيات السياسات</h3>
-      
-      <div className="stats-grid">
-        <div className="stat-card total">
-          <div className="stat-value">{stats.total}</div>
-          <div className="stat-label">إجمالي السياسات</div>
-        </div>
-        
-        <div className="stat-card valid">
-          <div className="stat-value">{stats.valid}</div>
-          <div className="stat-label">السياسات السارية</div>
-        </div>
-        
-        <div className="stat-card expired">
-          <div className="stat-value">{stats.expired}</div>
-          <div className="stat-label">السياسات المنتهية</div>
-        </div>
-        
-        <div className="stat-card draft">
-          <div className="stat-value">{stats.draft}</div>
-          <div className="stat-label">مسودات السياسات</div>
-        </div>
+    <div className="stats-container">
+      <div className="stat-card total">
+        <span className="stat-number">{stats.total}</span>
+        <span className="stat-label">إجمالي السياسات</span>
       </div>
-    </Card>
+      
+      <div className="stat-card active">
+        <span className="stat-number">{stats.active}</span>
+        <span className="stat-label">السياسات السارية</span>
+      </div>
+      
+      <div className="stat-card expired">
+        <span className="stat-number">{stats.expired}</span>
+        <span className="stat-label">السياسات المنتهية</span>
+      </div>
+    </div>
   );
 };
 
-export default Statistics; 
+export default Statistics;

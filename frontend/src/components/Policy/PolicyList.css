@@ -5,6 +5,17 @@
   padding: 20px;
 }
 
+.policy-container {
+  width: 100%; /* Full width */
+  height: 100vh; /* Full height of the viewport */
+  margin: 0; /* Remove any default margin */
+  padding: 20px; /* Add padding for content */
+  box-sizing: border-box; /* Include padding in width/height calculations */
+  background-color: #f8f9fa; /* Optional: Set a background color */
+  display: flex; /* Use flexbox for alignment */
+  flex-direction: column; /* Stack content vertically */
+}
+
 .top-controls {
   display: flex;
   justify-content: space-between;
@@ -65,9 +76,10 @@
 
 .policy-filters {
   display: flex;
+  justify-content: space-between; /* Spread filters and search bar */
   align-items: center;
+  margin-bottom: 20px;
   gap: 15px;
-  margin: 20px 0;
   flex-wrap: wrap;
 }
 
@@ -104,14 +116,15 @@
 }
 
 .table-responsive {
-  overflow-x: auto;
+  width: 100%; /* Ensure the table spans the full width */
+  overflow-x: auto; /* Add horizontal scrolling if needed */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
 }
 
 .policy-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100%; /* Ensure the table spans the full width */
+  border-collapse: collapse; /* Remove gaps between table cells */
   background-color: white;
   direction: rtl;
 }
@@ -268,4 +281,4 @@
     width: 100%;
     justify-content: space-between;
   }
-} 
+}

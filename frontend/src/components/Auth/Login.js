@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import './Auth.css';
 
@@ -121,10 +121,6 @@ const Login = () => {
             {loading || authLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </button>
         </form>
-        
-        <div className="auth-links">
-          <p>ليس لديك حساب؟ <Link to="/register">إنشاء حساب جديد</Link></p>
-        </div>
       </div>
     </div>
   );

@@ -67,11 +67,17 @@ const Users = () => {
   const handleDeleteUser = async (userId) => {
     if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا المستخدم؟')) {
       try {
+        setLoading(true); // Show loading state
         await axiosPrivate.delete(`/api/users/delete/${userId}`);
-        fetchUsers();
+        // Update the users list by filtering out the deleted user
+        setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
+        setLoading(false);
+        // Show success message
+        alert('تم حذف المستخدم بنجاح');
       } catch (err) {
         console.error(`Error deleting user ${userId}:`, err);
         alert('فشل في حذف المستخدم. الرجاء المحاولة مرة أخرى.');
+        setLoading(false);
       }
     }
   };
@@ -95,7 +101,7 @@ const Users = () => {
     setFormData({
       name: '',
       email: '',
-      role: 'user',
+      role: 'user', // Set default role
       password: ''
     });
   };
@@ -109,17 +115,18 @@ const Users = () => {
     });
   };
 
-  // Function to save edited user
+  // Modify the handleSaveUser function
   const handleSaveUser = async (e) => {
     e.preventDefault();
     
     try {
       setLoading(true);
       
-      // Prepare user data
+      // Prepare user data - always set role as 'user' for both new and existing users
       const userData = {
         ...formData,
-        isAdmin: formData.role === 'admin'
+        role: 'user',
+        isAdmin: false // Ensure isAdmin is always false
       };
       
       if (isAddingUser) {
@@ -133,7 +140,10 @@ const Users = () => {
         await axiosPrivate.post('/api/users/register', userData);
         setIsAddingUser(false);
       } else if (editingUser) {
-        // Update existing user
+        // Update existing user - remove role from update
+        delete userData.role; // Remove role from update data
+        delete userData.isAdmin; // Remove isAdmin from update data
+        
         // If password is empty, remove it from the request
         if (!userData.password) {
           delete userData.password;
@@ -224,24 +234,13 @@ const Users = () => {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              required={isAddingUser} // Only required when adding a new user
+              required={isAddingUser}
               className="form-control"
             />
           </div>
           
-          <div className="form-group">
-            <label htmlFor="role">نوع المستخدم</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleInputChange}
-              className="form-control"
-            >
-              <option value="user">مستخدم</option>
-              <option value="admin">مدير</option>
-            </select>
-          </div>
+          {/* Remove the role selection completely */}
+          <input type="hidden" name="role" value="user" />
           
           <div className="form-actions">
             <button 

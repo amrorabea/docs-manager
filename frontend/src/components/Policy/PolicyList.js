@@ -23,7 +23,7 @@ const PolicyList = () => {
   
   // Get context data
   const { policies, setPolicies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth(); // Add logout to destructuring
   const { showSuccess, showError } = useToast();
 
   const handleSearch = async (query) => {
@@ -80,6 +80,32 @@ const PolicyList = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
+  // Create actions component that includes both add policy and logout buttons
+  const Actions = () => (
+    <div className="header-actions">
+      {isAdmin ? (
+        <Link to="/add-policy">
+          <Button variant="primary">
+            <FaPlus style={{ marginLeft: '5px' }} /> 
+            إضافة سياسة جديدة
+          </Button>
+        </Link>
+      ) : (
+        <Button 
+          variant="secondary" 
+          onClick={handleLogout}
+          className="logout-button"
+        >
+          تسجيل خروج
+        </Button>
+      )}
+    </div>
+  );
+
   // In search mode, don't apply additional filtering - the API already filtered by department
   const displayedPolicies = isSearchMode 
     ? policies 
@@ -87,19 +113,10 @@ const PolicyList = () => {
       ? policies.filter(policy => policy.department && policy.department._id === selectedDepartment)
       : policies;
 
-  const AddPolicyButton = isAdmin ? (
-    <Link to="/add-policy">
-      <Button variant="primary">
-        <FaPlus style={{ marginLeft: '5px' }} /> 
-        إضافة سياسة جديدة
-      </Button>
-    </Link>
-  ) : null;
-
   return (
     <PageLayout 
       title="قائمة السياسات" 
-      actions={AddPolicyButton}
+      actions={<Actions />}
     >
       {/* Search component */}
       <SearchBar onSearch={handleSearch} />

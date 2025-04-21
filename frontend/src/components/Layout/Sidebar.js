@@ -12,6 +12,11 @@ const Sidebar = () => {
     return location.pathname === path ? 'active' : '';
   };
 
+  // Only render the sidebar if the user's role is "admin"
+  if (user?.role !== 'admin') {
+    return null;
+  }
+
   return (
     <div className="sidebar">
       <div className="sidebar-brand">
