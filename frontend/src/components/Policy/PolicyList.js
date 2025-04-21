@@ -185,32 +185,10 @@ const PolicyList = () => {
                     <StatusBadge status={policy.status} />
                   </td>
                   <td className="document-actions">
-                    {policy.pdfFileUrl && (
-                      <button 
-                        className="doc-button pdf"
-                        onClick={() => {
-                          downloadPolicyFile(policy._id, 'pdf')
-                            .catch(err => {
-                              console.error('Error opening PDF file:', err);
-                              showError('فشل في فتح ملف PDF. يرجى المحاولة مرة أخرى.');
-                            });
-                        }}
-                        title="تحميل ملف PDF"
-                      >
-                        <FaFilePdf />
-                      </button>
-                    )}
-                    
                     {policy.wordFileUrl && (
                       <button 
                         className="doc-button word"
-                        onClick={() => {
-                          downloadPolicyFile(policy._id, 'word')
-                            .catch(err => {
-                              console.error('Error opening Word file:', err);
-                              showError('فشل في فتح ملف Word. يرجى المحاولة مرة أخرى.');
-                            });
-                        }}
+                        onClick={() => downloadPolicyFile(policy._id, 'word')}
                         title="تحميل ملف Word"
                       >
                         <FaFileWord />
