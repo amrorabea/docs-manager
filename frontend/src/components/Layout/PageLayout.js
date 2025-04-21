@@ -22,18 +22,17 @@ const PageLayout = ({
   return (
     <Card className="page-layout">
       <div className="page-layout-header">
-        <h2 className="page-title">{title}</h2>
-        {actions && <div className="page-actions">{actions}</div>}
-      </div>
-      
-      {showHeader && (
-        <header className="user-header">
-          <div className="user-menu">
+        <div className="page-layout-left">
+          <h2 className="page-title">{title}</h2>
+          {actions && <div className="page-actions">{actions}</div>}
+        </div>
+        
+        {showHeader && (
+          <div className="user-menu-header">
             <span className="user-name">{user?.name || 'المستخدم'}</span>
-            <button onClick={logout} className="logout-btn">تسجيل خروج</button>
           </div>
-        </header>
-      )}
+        )}
+      </div>
       
       <div className="page-content">
         {children}
