@@ -7,12 +7,14 @@ import Button from '../UI/Button';
 import Loading from '../UI/Loading';
 import ErrorMessage from '../UI/ErrorMessage';
 import usePolicyContext from '../../hooks/usePolicyContext';
+import useToast from '../../hooks/useToast';
 import './Policy.css';
 
 const PolicyForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { departments, refreshPolicies } = usePolicyContext();
+  const { showSuccess, showError } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     department: '',
@@ -56,6 +58,7 @@ const PolicyForm = () => {
         } catch (err) {
           console.error('Error fetching policy:', err);
           setError('فشل تحميل بيانات السياسة');
+          showError('فشل تحميل بيانات السياسة');
         } finally {
           setLoading(false);
         }
@@ -63,7 +66,7 @@ const PolicyForm = () => {
 
       fetchPolicy();
     }
-  }, [id]);
+  }, [id, showError]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -124,8 +127,10 @@ const PolicyForm = () => {
 
       if (id) {
         await updatePolicy(id, formDataToSend);
+        showSuccess('تم تحديث السياسة بنجاح');
       } else {
         await createPolicy(formDataToSend);
+        showSuccess('تم إنشاء السياسة بنجاح');
       }
       
       refreshPolicies();
@@ -133,27 +138,30 @@ const PolicyForm = () => {
     } catch (err) {
       console.error('Error saving policy:', err);
       
+      let errorMessage = 'فشل حفظ السياسة. يرجى المحاولة مرة أخرى.';
+      
       if (err.response) {
         if (err.response.data && err.response.data.message) {
-          setError(err.response.data.message);
+          errorMessage = err.response.data.message;
         } else if (err.response.status === 400) {
-          setError('بيانات السياسة غير صالحة');
+          errorMessage = 'بيانات السياسة غير صالحة';
         } else if (err.response.status === 401) {
-          setError('يجب تسجيل الدخول لإجراء هذه العملية');
+          errorMessage = 'يجب تسجيل الدخول لإجراء هذه العملية';
         } else if (err.response.status === 403) {
-          setError('ليس لديك صلاحية لإجراء هذه العملية');
+          errorMessage = 'ليس لديك صلاحية لإجراء هذه العملية';
         } else if (err.response.status === 404) {
-          setError('السياسة غير موجودة');
+          errorMessage = 'السياسة غير موجودة';
         } else if (err.response.status === 500) {
-          setError('حدث خطأ في الخادم. يرجى المحاولة لاحقاً');
-        } else {
-          setError('فشل حفظ السياسة. يرجى المحاولة مرة أخرى.');
+          errorMessage = 'حدث خطأ في الخادم. يرجى المحاولة لاحقاً';
         }
       } else if (err.request) {
-        setError('لم يتم تلقي استجابة من الخادم. تحقق من اتصالك بالإنترنت.');
+        errorMessage = 'لم يتم تلقي استجابة من الخادم. تحقق من اتصالك بالإنترنت.';
       } else {
-        setError(`خطأ في الطلب: ${err.message}`);
+        errorMessage = `خطأ في الطلب: ${err.message}`;
       }
+      
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }

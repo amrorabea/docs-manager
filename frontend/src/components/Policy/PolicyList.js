@@ -4,6 +4,7 @@ import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus } from 'react-
 import { deletePolicy, downloadPolicyFile } from '../../services/policyService';
 import useAuth from '../../hooks/useAuth';
 import usePolicyContext from '../../hooks/usePolicyContext';
+import useToast from '../../hooks/useToast';
 import SearchBar from './SearchBar';
 import Statistics from '../Dashboard/Statistics';
 import PageLayout from '../Layout/PageLayout';
@@ -18,10 +19,12 @@ const PolicyList = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
   
   // Get context data
-  const { policies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
+  const { policies, setPolicies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
   const { user, isAdmin } = useAuth();
+  const { showSuccess, showError } = useToast();
 
   const handleSearch = async (query) => {
     try {
@@ -43,18 +46,26 @@ const PolicyList = () => {
       await searchPolicies(query, departmentId);
     } catch (err) {
       console.error('Search error:', err);
+      showError('حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.');
     }
   };
 
   const handleDeletePolicy = async (id) => {
     if (window.confirm('هل أنت متأكد من حذف هذه السياسة؟')) {
       try {
+        setDeletingId(id);
         await deletePolicy(id);
-        // Refresh policies after deletion
-        refreshPolicies();
+        
+        // Update policies list immediately without refetching from server
+        setPolicies(prevPolicies => prevPolicies.filter(policy => policy._id !== id));
+        
+        // Show success message
+        showSuccess('تم حذف السياسة بنجاح');
       } catch (err) {
         console.error('Error deleting policy:', err);
-        alert(`فشل في حذف السياسة: ${err.message || 'خطأ غير معروف'}`);
+        showError(`فشل في حذف السياسة: ${err.message || 'خطأ غير معروف'}`);
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -179,7 +190,10 @@ const PolicyList = () => {
                         className="doc-button pdf"
                         onClick={() => {
                           downloadPolicyFile(policy._id, 'pdf')
-                            .catch(err => console.error('Error opening PDF file:', err));
+                            .catch(err => {
+                              console.error('Error opening PDF file:', err);
+                              showError('فشل في فتح ملف PDF. يرجى المحاولة مرة أخرى.');
+                            });
                         }}
                         title="تحميل ملف PDF"
                       >
@@ -192,7 +206,10 @@ const PolicyList = () => {
                         className="doc-button word"
                         onClick={() => {
                           downloadPolicyFile(policy._id, 'word')
-                            .catch(err => console.error('Error opening Word file:', err));
+                            .catch(err => {
+                              console.error('Error opening Word file:', err);
+                              showError('فشل في فتح ملف Word. يرجى المحاولة مرة أخرى.');
+                            });
                         }}
                         title="تحميل ملف Word"
                       >
@@ -204,11 +221,12 @@ const PolicyList = () => {
                     {isAdmin ? (
                       <>
                         <button 
-                          className="delete-btn" 
+                          className="delete-btn"
+                          disabled={deletingId === policy._id}
                           onClick={() => handleDeletePolicy(policy._id)}
                           title="حذف"
                         >
-                          <FaTrash />
+                          {deletingId === policy._id ? '...' : <FaTrash />}
                         </button>
                         <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
                           <FaEdit />

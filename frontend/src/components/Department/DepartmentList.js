@@ -1,17 +1,20 @@
 import React, { useState, useContext } from 'react';
 import PolicyContext from '../../context/PolicyContext';
 import useAuth from '../../hooks/useAuth';
+import useToast from '../../hooks/useToast';
 import { createDepartment, updateDepartment, deleteDepartment } from '../../services/departmentService';
 import './Department.css';
 
 const DepartmentList = () => {
-  const { departments, refreshDepartments, loading, error: contextError } = useContext(PolicyContext);
+  const { departments, setDepartments, loading, error: contextError } = useContext(PolicyContext);
   const { isAdmin } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [editingId, setEditingId] = useState(null);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -35,18 +38,31 @@ const DepartmentList = () => {
       
       if (editingId) {
         console.log(`Updating department with ID: ${editingId}`);
-        const result = await updateDepartment(editingId, formData);
-        console.log('Update result:', result);
+        const updatedDepartment = await updateDepartment(editingId, formData);
+        console.log('Update result:', updatedDepartment);
+        
+        // Update department list in state without refetching
+        setDepartments(prevDepartments => 
+          prevDepartments.map(dept => 
+            dept._id === editingId ? updatedDepartment : dept
+          )
+        );
+        
+        showSuccess('تم تحديث الإدارة بنجاح');
       } else {
         console.log('Creating new department');
-        const result = await createDepartment(formData);
-        console.log('Creation result:', result);
+        const newDepartment = await createDepartment(formData);
+        console.log('Creation result:', newDepartment);
+        
+        // Add new department to state without refetching
+        setDepartments(prevDepartments => [...prevDepartments, newDepartment]);
+        
+        showSuccess('تم إنشاء الإدارة بنجاح');
       }
       
       setFormData({ name: '', description: '' });
       setEditingId(null);
       setShowForm(false);
-      refreshDepartments();
     } catch (err) {
       console.error('Error saving department:', err);
       
@@ -86,6 +102,7 @@ const DepartmentList = () => {
       }
       
       setFormError(errorMessage);
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -104,10 +121,16 @@ const DepartmentList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('هل أنت متأكد من حذف هذه الإدارة؟')) {
       try {
+        setDeletingId(id);
         console.log(`Deleting department with ID: ${id}`);
-        const result = await deleteDepartment(id);
-        console.log('Deletion result:', result);
-        refreshDepartments();
+        await deleteDepartment(id);
+        
+        // Remove department from state without refetching
+        setDepartments(prevDepartments => 
+          prevDepartments.filter(dept => dept._id !== id)
+        );
+        
+        showSuccess('تم حذف الإدارة بنجاح');
       } catch (err) {
         console.error('Error deleting department:', err);
         
@@ -117,7 +140,9 @@ const DepartmentList = () => {
           errorMessage = 'لا يمكن حذف هذه الإدارة لأنها مرتبطة بسياسات.';
         }
         
-        alert(errorMessage);
+        showError(errorMessage);
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -231,8 +256,9 @@ const DepartmentList = () => {
                     <button 
                       className="delete-btn" 
                       onClick={() => handleDelete(department._id)}
+                      disabled={deletingId === department._id}
                     >
-                      حذف
+                      {deletingId === department._id ? 'جاري الحذف...' : 'حذف'}
                     </button>
                   </>
                 ) : (
