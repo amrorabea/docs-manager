@@ -297,8 +297,16 @@ const Users = () => {
                 <tr key={user._id}>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
-                  <td>{user.role === 'admin' || user.isAdmin ? 'مدير' : 'مستخدم'}</td>
-                  <td>{new Date(user.createdAt).toLocaleDateString('ar-SA')}</td>
+                  <td>
+                    <span className={`role-badge ${user.role}`}>
+                      {user.role === 'admin' ? 'مسؤول' : 'مستخدم'}
+                    </span>
+                  </td>
+                  <td>{new Date(user.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}</td>
                   <td className="actions">
                     {isAdmin ? (
                       <>

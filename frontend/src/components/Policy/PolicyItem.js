@@ -7,9 +7,13 @@ const PolicyItem = ({ policy, onDelete }) => {
   return (
     <div className="policy-item">
       <div className="policy-name">{policy.name}</div>
-      <div className="policy-date">{formatDate(policy.approvalDate)}</div>
+      <div className="policy-dates">
+        <div className="policy-date-label">تاريخ الاعتماد:</div>
+        <div className="policy-date">{formatDate(policy.approvalDate)}</div>
+        <div className="policy-date-label">تاريخ انتهاء الصلاحية:</div>
+        <div className="policy-review-date">{formatDate(policy.approvalValidity)}</div>
+      </div>
       <div className="policy-authority">{policy.approvalAuthority}</div>
-      <div className="policy-review-date">{formatDate(policy.reviewDate)}</div>
       <div className="policy-status">
         <span className={`status-badge ${policy.status === 'ساري' ? 'active' : 'inactive'}`}>
           {policy.status}

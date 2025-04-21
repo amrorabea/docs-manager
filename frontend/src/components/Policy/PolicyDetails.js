@@ -63,13 +63,25 @@ const PolicyDetails = () => {
               <span className="details-label">صلاحية الاعتماد:</span>
               <span className="details-value">{policy.approvalAuthority}</span>
             </div>
-            <div className="details-item">
+            <div className="details-group">
               <span className="details-label">تاريخ الاعتماد:</span>
-              <span className="details-value">{formatDate(policy.approvalDate)}</span>
+              <span className="details-value">
+                {new Date(policy.approvalDate).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                })}
+              </span>
             </div>
-            <div className="details-item">
+            <div className="details-group">
               <span className="details-label">تاريخ المراجعة:</span>
-              <span className="details-value">{formatDate(policy.reviewDate)}</span>
+              <span className="details-value">
+                {new Date(policy.approvalValidity).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                })}
+              </span>
             </div>
           </div>
         </div>

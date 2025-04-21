@@ -125,6 +125,11 @@
   font-weight: 600;
 }
 
+.policy-table th.actions-header {
+  text-align: center;
+  min-width: 80px;
+}
+
 .policy-table td {
   padding: 12px 15px;
   border-bottom: 1px solid #eee;
@@ -162,60 +167,64 @@
   color: #ffc107;
 }
 
+.document-actions {
+  text-align: center;
+  padding: 5px;
+}
+
+.document-actions .doc-button {
+  display: inline-block;
+  margin: 0 3px;
+}
+
 .row-actions {
   display: flex;
   gap: 10px;
   justify-content: center;
+  align-items: center;
+  min-width: 80px;
 }
 
-.edit-btn, .delete-btn {
-  background: none;
+/* Style for all buttons (document and actions) */
+.doc-button, .edit-btn, .delete-btn {
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #6c757d;
-  transition: color 0.3s;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.edit-btn:hover {
-  color: #00a884;
-}
-
-.delete-btn:hover {
-  color: #dc3545;
-}
-
-.document-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-
-.doc-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  padding: 5px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: white;
+  transition: opacity 0.3s;
 }
 
+.doc-button:hover, .edit-btn:hover, .delete-btn:hover {
+  opacity: 0.8;
+}
+
+/* Document buttons */
 .doc-button.word {
-  color: #2b579a;
+  background-color: #2b579a;
 }
 
 .doc-button.pdf {
-  color: #f40f02;
+  background-color: #f40f02;
 }
 
-.doc-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+/* Action buttons */
+.edit-btn {
+  background-color: #ffc107;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+}
+
+.no-actions {
+  color: #ccc;
+  font-size: 18px;
 }
 
 .loading, .error-message, .no-policies {

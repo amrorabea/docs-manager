@@ -152,7 +152,7 @@ const PolicyList = () => {
                 <th>تاريخ انتهاء الصلاحية</th>
                 <th>الحالة</th>
                 <th>المستندات</th>
-                <th>الإجراءات</th>
+                <th className="actions-header">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -160,38 +160,49 @@ const PolicyList = () => {
                 <tr key={policy._id} className={policy.status === 'expired' ? 'expired' : ''}>
                   <td>{policy.name}</td>
                   <td>{policy.department ? policy.department.name : 'غير محدد'}</td>
-                  <td>{new Date(policy.approvalDate).toLocaleDateString('ar-SA')}</td>
-                  <td>{new Date(policy.approvalValidity).toLocaleDateString('ar-SA')}</td>
+                  <td>{new Date(policy.approvalDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}</td>
+                  <td>{new Date(policy.approvalValidity).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}</td>
                   <td>
                     <StatusBadge status={policy.status} />
                   </td>
                   <td className="document-actions">
-                    {policy.wordFileUrl && (
-                      <button 
-                        className="doc-button word"
-                        onClick={() => downloadPolicyFile(policy._id, 'word')}
-                        title="تحميل ملف Word"
-                      >
-                        <FaFileWord />
-                      </button>
-                    )}
-                    
                     {policy.pdfFileUrl && (
                       <button 
                         className="doc-button pdf"
-                        onClick={() => downloadPolicyFile(policy._id, 'pdf')}
+                        onClick={() => {
+                          downloadPolicyFile(policy._id, 'pdf')
+                            .catch(err => console.error('Error opening PDF file:', err));
+                        }}
                         title="تحميل ملف PDF"
                       >
                         <FaFilePdf />
                       </button>
                     )}
+                    
+                    {policy.wordFileUrl && (
+                      <button 
+                        className="doc-button word"
+                        onClick={() => {
+                          downloadPolicyFile(policy._id, 'word')
+                            .catch(err => console.error('Error opening Word file:', err));
+                        }}
+                        title="تحميل ملف Word"
+                      >
+                        <FaFileWord />
+                      </button>
+                    )}
                   </td>
                   <td className="row-actions">
-                    {isAdmin && (
+                    {isAdmin ? (
                       <>
-                        <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
-                          <FaEdit />
-                        </Link>
                         <button 
                           className="delete-btn" 
                           onClick={() => handleDeletePolicy(policy._id)}
@@ -199,7 +210,12 @@ const PolicyList = () => {
                         >
                           <FaTrash />
                         </button>
+                        <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
+                          <FaEdit />
+                        </Link>
                       </>
+                    ) : (
+                      <span className="no-actions">-</span>
                     )}
                   </td>
                 </tr>
