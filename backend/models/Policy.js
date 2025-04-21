@@ -74,6 +74,10 @@ const policySchema = new mongoose.Schema(
             type: String,
             index: 'text' // MongoDB text index for full-text search
         },
+        wordContent: { // Extracted Word content for searching
+            type: String,
+            text: true // Enable text indexing
+        },
         lastStatusCheckDate: { // Date when status was last checked automatically
             type: Date,
             default: Date.now
@@ -101,7 +105,7 @@ policySchema.virtual('daysUntilExpiry').get(function() {
 policySchema.index({ department: 1, status: 1 });
 
 // Text index for search functionality
-policySchema.index({ name: 'text', textContent: 'text' });
+policySchema.index({ name: 'text', textContent: 'text', wordContent: 'text' });
 
 // Pre-save hook to calculate approvalValidity based on approvalDate and reviewCycleYears
 // and to automatically update status based on current date

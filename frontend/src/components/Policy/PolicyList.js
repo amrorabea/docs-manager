@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus } from 'react-icons/fa';
-import { deletePolicy, downloadPolicyFile } from '../../services/policyService';
+import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus, FaEye } from 'react-icons/fa';
+import { deletePolicy } from '../../services/policyService';
 import useAuth from '../../hooks/useAuth';
 import usePolicyContext from '../../hooks/usePolicyContext';
 import useToast from '../../hooks/useToast';
 import SearchBar from './SearchBar';
+import ContentSearchBar from '../Search/ContentSearchBar';
 import Statistics from '../Dashboard/Statistics';
 import PageLayout from '../Layout/PageLayout';
 import Button from '../UI/Button';
@@ -13,6 +14,8 @@ import Loading from '../UI/Loading';
 import ErrorMessage from '../UI/ErrorMessage';
 import EmptyState from '../UI/EmptyState';
 import StatusBadge from '../UI/StatusBadge';
+import DocumentViewer from './DocumentViewer';
+import { searchPolicyContent } from '../../services/policyService';
 import './PolicyList.css';
 
 const PolicyList = () => {
@@ -20,6 +23,10 @@ const PolicyList = () => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [isContentSearching, setIsContentSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
   
   // Get context data
   const { policies, setPolicies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
@@ -47,6 +54,24 @@ const PolicyList = () => {
     } catch (err) {
       console.error('Search error:', err);
       showError('حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.');
+    }
+  };
+
+  const handleContentSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    try {
+      setIsContentSearching(true);
+      const results = await searchPolicyContent(query);
+      setSearchResults(results);
+    } catch (error) {
+      showError('حدث خطأ أثناء البحث في المحتوى');
+      console.error('Content search error:', error);
+    } finally {
+      setIsContentSearching(false);
     }
   };
 
@@ -82,6 +107,39 @@ const PolicyList = () => {
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleViewDocument = (policy) => {
+    setSelectedDocument(policy.wordFileUrl);
+    setViewerOpen(true);
+  };
+
+  const handleDownload = async (policy, fileType) => {
+    try {
+      const url = fileType === 'pdf' ? policy.pdfFileUrl : policy.wordFileUrl;
+      
+      // Create a GET request with responseType blob
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      // Create a blob URL for the file
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Create temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${policy.name}.${fileType}`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+    } catch (error) {
+      console.error('Download error:', error);
+      showError('فشل في تحميل الملف');
+    }
   };
 
   // Create actions component that includes both add policy and logout buttons
@@ -120,6 +178,31 @@ const PolicyList = () => {
     >
       {/* Search component */}
       <SearchBar onSearch={handleSearch} />
+      
+      {/* Content search bar */}
+      <ContentSearchBar 
+        onSearch={handleContentSearch}
+        isLoading={isContentSearching}
+      />
+
+      {/* Show search results if available */}
+      {searchResults && (
+        <div className="search-results">
+          <h3>نتائج البحث في المحتوى:</h3>
+          {searchResults.length === 0 ? (
+            <p>لا توجد نتائج مطابقة للبحث</p>
+          ) : (
+            <ul className="content-results-list">
+              {searchResults.map(result => (
+                <li key={result._id} className="content-result-item">
+                  <h4>{result.policy.name}</h4>
+                  <p>{result.excerpt}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       
       {/* Statistics component */}
       <Statistics departmentId={selectedDepartment} />
@@ -203,13 +286,31 @@ const PolicyList = () => {
                   </td>
                   <td className="document-actions">
                     {policy.wordFileUrl && (
-                      <button 
-                        className="doc-button word"
-                        onClick={() => downloadPolicyFile(policy._id, 'word')}
-                        title="تحميل ملف Word"
-                      >
-                        <FaFileWord />
-                      </button>
+                      <>
+                        <button 
+                          className="doc-button view"
+                          onClick={() => handleViewDocument(policy)}
+                          title="عرض المستند"
+                        >
+                          <FaEye />
+                        </button>
+                        <button 
+                          className="doc-button word"
+                          onClick={() => handleDownload(policy, 'docx')}
+                          title="تحميل ملف Word"
+                        >
+                          <FaFileWord />
+                        </button>
+                        {policy.pdfFileUrl && (
+                          <button 
+                            className="doc-button pdf"
+                            onClick={() => handleDownload(policy, 'pdf')}
+                            title="تحميل ملف PDF"
+                          >
+                            <FaFilePdf />
+                          </button>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="row-actions">
@@ -236,6 +337,15 @@ const PolicyList = () => {
             </tbody>
           </table>
         </div>
+      )}
+      {viewerOpen && selectedDocument && (
+        <DocumentViewer
+          fileUrl={selectedDocument}
+          onClose={() => {
+            setViewerOpen(false);
+            setSelectedDocument(null);
+          }}
+        />
       )}
     </PageLayout>
   );
