@@ -89,11 +89,31 @@ export const deletePolicy = async (id) => {
   }
 };
 
-export const downloadPolicyFile = (id, fileType) => {
-  // For file downloads, we'll use a direct link rather than handling it in JavaScript
-  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-  const downloadUrl = `${baseUrl}/api/policies/download/${id}/${fileType}`;
-  
-  // Open the download in a new window/tab
-  window.open(downloadUrl, '_blank');
+export const downloadPolicyFile = async (id, fileType) => {
+  try {
+    // Get the policy to access the direct Cloudinary URL
+    const policy = await getPolicy(id);
+    
+    // Get the direct Cloudinary URL based on file type
+    let fileUrl;
+    if (fileType === 'word') {
+      fileUrl = policy.wordFileUrl;
+    } else if (fileType === 'pdf') {
+      fileUrl = policy.pdfFileUrl;
+      
+      // For PDFs, modify the Cloudinary URL to properly display in browser
+      // Change 'raw/upload' to 'image/view' for PDFs to render correctly
+      fileUrl = fileUrl.replace('/raw/upload/', '/image/view/');
+    }
+    
+    if (!fileUrl) {
+      throw new Error(`No ${fileType} file available for this policy`);
+    }
+    
+    // Open the Cloudinary URL directly in a new window/tab
+    window.open(fileUrl, '_blank');
+  } catch (error) {
+    console.error(`Error downloading ${fileType} file:`, error);
+    alert(`حدث خطأ أثناء محاولة فتح الملف. يرجى المحاولة مرة أخرى.`);
+  }
 };

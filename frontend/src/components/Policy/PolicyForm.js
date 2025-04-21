@@ -20,8 +20,8 @@ const PolicyForm = () => {
     reviewCycleYears: 2,
     approvalValidity: '',
     wordFile: null,
-    pdfFile: null,
-    status: 'valid'
+    pdfFile: null
+    // Status will be determined automatically based on dates
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -45,8 +45,8 @@ const PolicyForm = () => {
             reviewCycleYears: data.reviewCycleYears || 2,
             approvalValidity: formatDateForInput(data.approvalValidity),
             wordFile: null,
-            pdfFile: null,
-            status: data.status || 'valid'
+            pdfFile: null
+            // Status will be determined automatically
           });
           
           setExistingFiles({
@@ -84,6 +84,16 @@ const PolicyForm = () => {
     }
   };
 
+  // Function to determine status based on dates
+  const determineStatus = () => {
+    // If the expiration date is in the future, status is 'valid' (ساري)
+    // Otherwise status is 'expired' (منتهي)
+    const today = new Date();
+    const expirationDate = new Date(formData.approvalValidity);
+    
+    return expirationDate > today ? 'valid' : 'expired';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -98,7 +108,10 @@ const PolicyForm = () => {
       formDataToSend.append('approvalDate', formData.approvalDate);
       formDataToSend.append('reviewCycleYears', formData.reviewCycleYears);
       formDataToSend.append('approvalValidity', formData.approvalValidity);
-      formDataToSend.append('status', formData.status);
+      
+      // Determine status automatically based on dates
+      const status = determineStatus();
+      formDataToSend.append('status', status);
       
       // Add files only if they are selected
       if (formData.wordFile) {
@@ -225,6 +238,9 @@ const PolicyForm = () => {
               required
               className="form-control"
             />
+            <small className="form-text text-muted">
+              سيتم تحديد حالة السياسة تلقائياً: ساري إذا كان تاريخ الانتهاء في المستقبل، ومنتهي إذا كان في الماضي.
+            </small>
           </div>
         </div>
         
@@ -242,21 +258,6 @@ const PolicyForm = () => {
               required
               className="form-control"
             />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="status">الحالة</label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className="form-control"
-            >
-              <option value="valid">ساري</option>
-              <option value="expired">منتهي</option>
-              <option value="draft">مسودة</option>
-            </select>
           </div>
         </div>
         

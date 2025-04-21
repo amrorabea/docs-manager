@@ -59,9 +59,13 @@ const UserDetails = () => {
           <span className="detail-label">نوع المستخدم:</span>
           <span className="detail-value">{user.isAdmin ? 'مدير' : 'مستخدم'}</span>
         </div>
-        <div className="user-detail">
+        <div className="detail-item">
           <span className="detail-label">تاريخ التسجيل:</span>
-          <span className="detail-value">{new Date(user.createdAt).toLocaleDateString('ar-SA')}</span>
+          <span className="detail-value">{new Date(user.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          })}</span>
         </div>
       </div>
       <div className="user-actions">

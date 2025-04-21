@@ -104,7 +104,7 @@ policySchema.index({ department: 1, status: 1 });
 policySchema.index({ name: 'text', textContent: 'text' });
 
 // Pre-save hook to calculate approvalValidity based on approvalDate and reviewCycleYears
-// but only if approvalValidity isn't already set
+// and to automatically update status based on current date
 policySchema.pre('save', function(next) {
     // Only auto-calculate approvalValidity if it's not already set
     if ((this.isModified('approvalDate') || this.isModified('reviewCycleYears')) && !this.approvalValidity) {
@@ -113,10 +113,19 @@ policySchema.pre('save', function(next) {
         this.approvalValidity = validityDate;
     }
     
-    // Check if policy is expired
-    if (this.approvalValidity && new Date() > this.approvalValidity) {
+    // Always check if policy is expired and update status
+    const now = new Date();
+    if (this.approvalValidity && now > this.approvalValidity) {
         this.status = 'expired';
+    } else if (this.approvalValidity && now <= this.approvalValidity) {
+        // Only update to valid if it's not a draft
+        if (this.status !== 'draft') {
+            this.status = 'valid';
+        }
     }
+    
+    // Update the last status check date
+    this.lastStatusCheckDate = now;
     
     next();
 });

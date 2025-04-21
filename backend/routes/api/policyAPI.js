@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const policyController = require('../../controllers/policyController');
-const { policyUpload, handleUploadErrors } = require('../../middleware/uploadMiddleware');
+const { documentUpload, uploadToCloudinary, handleUploadErrors } = require('../../middleware/cloudinaryUploadMiddleware');
 
 // @desc    Create a new policy
 // @route   POST /api/policies/create
 // @access  Public
-router.post('/create', policyUpload, handleUploadErrors, policyController.createPolicy);
+router.post('/create', documentUpload, handleUploadErrors, uploadToCloudinary, policyController.createPolicy);
 
 // @desc    Get all policies (supports filtering by departmentId)
 // @route   GET /api/policies/all
@@ -41,7 +41,7 @@ router.post('/update-statuses', policyController.updatePolicyStatuses);
 // @desc    Update a policy by id
 // @route   PUT /api/policies/update/:id
 // @access  Public
-router.put('/update/:id', policyUpload, handleUploadErrors, policyController.updatePolicy);
+router.put('/update/:id', documentUpload, handleUploadErrors, uploadToCloudinary, policyController.updatePolicy);
 
 // @desc    Delete a policy by id
 // @route   DELETE /api/policies/delete/:id
