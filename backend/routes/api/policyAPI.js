@@ -18,6 +18,11 @@ router.get('/all', policyController.getPolicies);
 // @access  Public
 router.get('/search', policyController.searchPolicies);
 
+// @desc    Search policy content
+// @route   GET /api/policies/content-search
+// @access  Public
+router.get('/content-search', policyController.searchPolicyContent);
+
 // @desc    Get policy statistics
 // @route   GET /api/policies/stats
 // @access  Public

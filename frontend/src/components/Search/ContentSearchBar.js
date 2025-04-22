@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FaSearch } from 'react-icons/fa';
+import Button from '../UI/Button';
+import Card from '../UI/Card';
 import './ContentSearchBar.css';
 
 const ContentSearchBar = ({ onSearch, isLoading }) => {
@@ -17,29 +19,25 @@ const ContentSearchBar = ({ onSearch, isLoading }) => {
   };
 
   return (
-    <div className="content-search-container">
-      <form onSubmit={handleSubmit} className="content-search-form">
+    <Card className="search-bar-container">
+      <form className="search-form" onSubmit={handleSubmit}>
         <input
           type="text"
+          className="search-input"
+          placeholder="البحث في محتوى السياسات..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="البحث في محتوى السياسات..."
-          className="content-search-input"
         />
-        <button 
+        <Button 
           type="submit" 
-          className="content-search-button"
-          disabled={isLoading || !searchQuery.trim()}
-          title="بحث"
+          variant="primary"
+          disabled={isLoading}
         >
-          {isLoading ? (
-            <span className="loading-spinner"></span>
-          ) : (
-            <FaSearch size={16} />
-          )}
-        </button>
+          <FaSearch />
+          <span>{isLoading ? 'جاري البحث...' : 'بحث'}</span>
+        </Button>
       </form>
-    </div>
+    </Card>
   );
 };
 

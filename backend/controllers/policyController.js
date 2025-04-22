@@ -3,6 +3,8 @@ const Department = require('../models/Department');
 const path = require('path');
 const fs = require('fs');
 const cloudinary = require('../config/cloudinaryConfig');
+const mammoth = require('mammoth');
+const axios = require('axios');
 // We'll add docx text extraction later with a proper library
 
 // Helper to handle Cloudinary URLs
@@ -284,6 +286,70 @@ exports.searchPolicies = async (req, res) => {
         console.error('Search error:', err);
         res.status(500).json({ message: 'Error searching policies', error: err.message });
     }
+};
+
+// @desc    Search policy content
+// @route   GET /api/policies/search-content
+// @access  Public
+exports.searchPolicyContent = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    const policies = await Policy.find({}).populate('department');
+    const results = [];
+
+    for (const policy of policies) {
+      if (!policy.wordFileUrl) continue;
+
+      try {
+        const response = await axios.get(policy.wordFileUrl, {
+          responseType: 'arraybuffer'
+        });
+
+        const { value: text } = await mammoth.extractRawText({
+          buffer: response.data
+        });
+
+        // Split text into lines
+        const lines = text.split('\n');
+        const matches = [];
+
+        // Search through each line
+        lines.forEach((line, index) => {
+          if (line.toLowerCase().includes(query.toLowerCase())) {
+            matches.push({
+              lineNumber: index + 1,
+              excerpt: line.trim(),
+              highlight: query
+            });
+          }
+        });
+
+        if (matches.length > 0) {
+          results.push({
+            policy: {
+              _id: policy._id,
+              name: policy.name,
+              department: policy.department?.name,
+              fileName: policy.wordFileUrl.split('/').pop() // Extract filename from URL
+            },
+            matches
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing file for policy ${policy.name}:`, error);
+        continue;
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Content search error:', error);
+    res.status(500).json({ message: 'Error searching policy content' });
+  }
 };
 
 // @desc    Get policy statistics

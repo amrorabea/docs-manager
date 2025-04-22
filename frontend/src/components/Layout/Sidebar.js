@@ -46,12 +46,6 @@ const Sidebar = () => {
             </Link>
           </li>
           
-          <li className="nav-item">
-            <Link to="/settings" className={`nav-link ${isActive('/settings')}`}>
-              <span className="nav-icon"><FaCog /></span>
-              <span className="nav-text">الإعدادات</span>
-            </Link>
-          </li>
         </ul>
       </nav>
       

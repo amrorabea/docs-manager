@@ -40,7 +40,6 @@ function App() {
                     <Route path="departments" element={<DepartmentList />} />
                     <Route path="users" element={<Users />} />
                     <Route path="users/:email" element={<UserDetails />} />
-                    <Route path="settings" element={<Settings />} />
                   </Route>
                 </Route>
               </Route>

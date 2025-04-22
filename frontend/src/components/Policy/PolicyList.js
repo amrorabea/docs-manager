@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus, FaEye } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus } from 'react-icons/fa';
 import { deletePolicy } from '../../services/policyService';
 import useAuth from '../../hooks/useAuth';
 import usePolicyContext from '../../hooks/usePolicyContext';
@@ -14,7 +14,6 @@ import Loading from '../UI/Loading';
 import ErrorMessage from '../UI/ErrorMessage';
 import EmptyState from '../UI/EmptyState';
 import StatusBadge from '../UI/StatusBadge';
-import DocumentViewer from './DocumentViewer';
 import { searchPolicyContent } from '../../services/policyService';
 import './PolicyList.css';
 
@@ -23,8 +22,6 @@ const PolicyList = () => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState(null);
   const [isContentSearching, setIsContentSearching] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
   
@@ -58,18 +55,13 @@ const PolicyList = () => {
   };
 
   const handleContentSearch = async (query) => {
-    if (!query.trim()) {
-      setSearchResults(null);
-      return;
-    }
-
     try {
       setIsContentSearching(true);
       const results = await searchPolicyContent(query);
       setSearchResults(results);
     } catch (error) {
-      showError('حدث خطأ أثناء البحث في المحتوى');
       console.error('Content search error:', error);
+      showError('فشل في البحث في المحتوى');
     } finally {
       setIsContentSearching(false);
     }
@@ -107,11 +99,6 @@ const PolicyList = () => {
 
   const handleLogout = () => {
     logout();
-  };
-
-  const handleViewDocument = (policy) => {
-    setSelectedDocument(policy.wordFileUrl);
-    setViewerOpen(true);
   };
 
   const handleDownload = async (policy, fileType) => {
@@ -188,18 +175,34 @@ const PolicyList = () => {
       {/* Show search results if available */}
       {searchResults && (
         <div className="search-results">
-          <h3>نتائج البحث في المحتوى:</h3>
+          <h3>نتائج البحث في المحتوى ({searchResults.length})</h3>
           {searchResults.length === 0 ? (
             <p>لا توجد نتائج مطابقة للبحث</p>
           ) : (
-            <ul className="content-results-list">
-              {searchResults.map(result => (
-                <li key={result._id} className="content-result-item">
-                  <h4>{result.policy.name}</h4>
-                  <p>{result.excerpt}</p>
-                </li>
+            <div className="content-results">
+              {searchResults.map((result) => (
+                <div key={result.policy._id} className="result-item">
+                  <div className="result-header">
+                    <h4>{result.policy.name}</h4>
+                    <span className="file-name">{result.policy.fileName}</span>
+                    <span className="department-name">{result.policy.department}</span>
+                  </div>
+                  <div className="matches-container">
+                    {result.matches.map((match, index) => (
+                      <div key={index} className="match-item">
+                        <div className="line-number">السطر {match.lineNumber}</div>
+                        <p className="excerpt" dangerouslySetInnerHTML={{
+                          __html: match.excerpt.replace(
+                            new RegExp(`(${match.highlight})`, 'gi'),
+                            '<span class="highlight">$1</span>'
+                          )
+                        }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       )}
@@ -209,7 +212,6 @@ const PolicyList = () => {
       
       {/* Department filter */}
       <div className="policy-filters">
-        <label htmlFor="department-filter">تصفية حسب الإدارة:</label>
         <select
           id="department-filter"
           value={selectedDepartment}
@@ -263,7 +265,7 @@ const PolicyList = () => {
                 <th>تاريخ انتهاء الصلاحية</th>
                 <th>الحالة</th>
                 <th>المستندات</th>
-                <th className="actions-header">الإجراءات</th>
+                {isAdmin && <th className="actions-header">الإجراءات</th>}
               </tr>
             </thead>
             <tbody>
@@ -288,13 +290,6 @@ const PolicyList = () => {
                     {policy.wordFileUrl && (
                       <>
                         <button 
-                          className="doc-button view"
-                          onClick={() => handleViewDocument(policy)}
-                          title="عرض المستند"
-                        >
-                          <FaEye />
-                        </button>
-                        <button 
                           className="doc-button word"
                           onClick={() => handleDownload(policy, 'docx')}
                           title="تحميل ملف Word"
@@ -313,39 +308,26 @@ const PolicyList = () => {
                       </>
                     )}
                   </td>
-                  <td className="row-actions">
-                    {isAdmin ? (
-                      <>
-                        <button 
-                          className="delete-btn"
-                          disabled={deletingId === policy._id}
-                          onClick={() => handleDeletePolicy(policy._id)}
-                          title="حذف"
-                        >
-                          {deletingId === policy._id ? '...' : <FaTrash />}
-                        </button>
-                        <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
-                          <FaEdit />
-                        </Link>
-                      </>
-                    ) : (
-                      <span className="no-actions">-</span>
-                    )}
-                  </td>
+                  {isAdmin && (
+                    <td className="row-actions">
+                      <button 
+                        className="delete-btn"
+                        disabled={deletingId === policy._id}
+                        onClick={() => handleDeletePolicy(policy._id)}
+                        title="حذف"
+                      >
+                        {deletingId === policy._id ? '...' : <FaTrash />}
+                      </button>
+                      <Link to={`/edit-policy/${policy._id}`} className="edit-btn" title="تعديل">
+                        <FaEdit />
+                      </Link>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-      {viewerOpen && selectedDocument && (
-        <DocumentViewer
-          fileUrl={selectedDocument}
-          onClose={() => {
-            setViewerOpen(false);
-            setSelectedDocument(null);
-          }}
-        />
       )}
     </PageLayout>
   );

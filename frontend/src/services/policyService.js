@@ -37,11 +37,12 @@ export const searchPolicies = async (query, departmentId = null) => {
 
 export const searchPolicyContent = async (query) => {
   try {
-    const response = await axiosPrivate.get('/api/policies/search-content', {
-      params: { q: query }
+    const response = await axiosPrivate.get('/api/policies/content-search', {
+      params: { query }
     });
     return response.data;
   } catch (error) {
+    console.error('Content search error:', error);
     throw error;
   }
 };
