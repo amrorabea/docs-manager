@@ -52,7 +52,7 @@ const handleRefreshToken = async (req, res) => {
                         "isAdmin": foundEmail.role === 'admin'
                     },
                     process.env.ACCESS_TOKEN_SECRET,
-                    { expiresIn: '5m' }
+                    { expiresIn: '60m' }
                 );
                 
                 console.log('New access token created');

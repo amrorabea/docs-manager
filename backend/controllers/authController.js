@@ -19,7 +19,7 @@ const handleLogin = async (req, res) => {
                 "isAdmin": foundEmail.role === 'admin'
             },
             process.env.ACCESS_TOKEN_SECRET,
-            { expiresIn: '5m' }
+            { expiresIn: '60m' }
         );
         const refreshToken = jwt.sign(
             {
@@ -27,7 +27,7 @@ const handleLogin = async (req, res) => {
                 "role": foundEmail.role
             },
             process.env.REFRESH_TOKEN_SECRET,
-            { expiresIn: '1d' }
+            { expiresIn: '2d' }
         );
         // Saving refreshToken with current user
         foundEmail.refreshToken = refreshToken;
@@ -35,7 +35,7 @@ const handleLogin = async (req, res) => {
         console.log(result);
 
         // Creates Secure Cookie with refresh token
-        res.cookie('jwt', refreshToken, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 24 * 60 * 60 * 1000 });
+        res.cookie('jwt', refreshToken, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 2 * 24 * 60 * 60 * 1000 });
 
         // Send authorization access token to user
         res.json({ 
