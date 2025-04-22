@@ -11,6 +11,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.8.4",
+    "email-validator": "^2.0.4",
     "jwt-decode": "^4.0.0",
     "react": "^19.1.0",
     "react-doc-viewer": "^0.1.14",

@@ -12,7 +12,6 @@ import DepartmentList from './components/Department/DepartmentList';
 import RequireAuth from './components/Auth/RequireAuth';
 import Users from './components/User/Users';
 import UserDetails from './components/User/UserDetails';
-import Settings from './components/Settings/Settings';
 import ProtectedAdminRoute from './components/Auth/ProtectedAdminRoute';
 import './App.css';
 
