@@ -36,10 +36,15 @@
     background-color: #f5f5f5;
   }
   
+  .users-table th:last-child, 
+  .users-table td.actions {
+    text-align: left;
+  }
+  
   .actions {
     display: flex;
     gap: 5px;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
   
   .view-btn, .edit-btn, .delete-btn {
