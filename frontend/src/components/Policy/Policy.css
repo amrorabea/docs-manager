@@ -941,3 +941,79 @@ body {
     display: none;
   }
 }
+
+/* Add to the end of the file */
+.error-field {
+  border: 2px solid #ff3860 !important;
+  background-color: rgba(255, 56, 96, 0.05);
+}
+
+/* Add a small shake animation for error fields */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.error-field:focus {
+  animation: shake 0.3s;
+  box-shadow: 0 0 0 0.2rem rgba(255, 56, 96, 0.25) !important;
+}
+
+/* Add to the end of the file */
+.error-container {
+  text-align: center;
+  padding: 30px;
+  margin: 20px auto;
+  max-width: 600px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  direction: rtl;
+}
+
+.error-container h3 {
+  color: #d32f2f;
+  margin-bottom: 15px;
+}
+
+.error-container p {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.retry-button {
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background-color: #3367d6;
+}
+
+.retry-button:disabled {
+  background-color: #a2befa;
+  cursor: not-allowed;
+}
+
+.back-button {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background-color: #e0e0e0;
+}

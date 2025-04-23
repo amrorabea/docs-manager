@@ -243,6 +243,9 @@ axiosPrivate.interceptors.request.use(
   },
   error => {
     console.error('Request interceptor error:', error);
+    // Debug auth status on request errors
+    console.log('Auth status on request error:');
+    debugAuthStatus();
     return Promise.reject(error);
   }
 );
@@ -268,6 +271,7 @@ axiosPrivate.interceptors.response.use(
         timestamp: Date.now()
       });
     }
+    
     return response;
   },
   async error => {
@@ -397,6 +401,12 @@ axiosPrivate.interceptors.response.use(
         console.error('User is not logged in and access is forbidden');
         handleAuthFailure();
       }
+    }
+    
+    // If it's an auth error (401 or 403), log auth debug info
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      console.log('Auth error detected. Debug info:');
+      debugAuthStatus();
     }
     
     return Promise.reject(error);
@@ -725,8 +735,15 @@ axiosPublic.interceptors.request.use(
 axiosPrivate.interceptors.request.use(
   async (config) => {
     try {
-      // For non-GET requests, ensure CSRF token is set
-      if (config.method !== 'get') {
+      // Do not set Content-Type for FormData objects - the browser handles this automatically
+      const isFormData = config.data instanceof FormData;
+      
+      if (isFormData) {
+        // Delete Content-Type header if it exists to let the browser set it with correct boundary
+        delete config.headers['Content-Type'];
+        console.log('FormData detected: Content-Type header removed to allow browser to set it correctly');
+      } else if (config.method !== 'get') {
+        // For non-GET requests that aren't FormData, ensure CSRF token is set
         const csrfToken = await ensureCSRFToken();
         
         // For POST/PUT/PATCH, add CSRF to body instead of headers when possible
@@ -767,3 +784,31 @@ axiosPrivate.interceptors.request.use(
 
 // Ensure apiRequest is exported
 export { apiRequest };
+
+// Add this function at the end of the file
+export const debugAuthStatus = () => {
+  try {
+    const authData = {
+      accessToken: !!localStorage.getItem('accessToken'),
+      refreshToken: document.cookie.includes('refresh_token'),
+      csrfToken: !!getCSRFToken(),
+      user: localStorage.getItem('user'),
+      isAdmin: localStorage.getItem('isAdmin') === 'true',
+      cookies: document.cookie
+    };
+    
+    console.log('Auth Debug Info:', authData);
+    return authData;
+  } catch (err) {
+    console.error('Error debugging auth status:', err);
+    return { error: err.message };
+  }
+};
+
+// Add a helper function to increase timeout for specific API calls
+export const withExtendedTimeout = (config = {}) => {
+  return {
+    ...config,
+    timeout: 60000 // 60 seconds for operations that might take longer
+  };
+};

@@ -172,12 +172,49 @@ exports.createPolicy = async (req, res) => {
 
         const departmentId = department; // Use department directly as it's the field name used in frontend
 
+        // Validate required fields
+        if (!name) {
+            return res.status(400).json({ 
+                message: 'Policy name is required',
+                field: 'name'
+            });
+        }
+        
+        if (!departmentId) {
+            return res.status(400).json({ 
+                message: 'Department is required',
+                field: 'department'
+            });
+        }
+        
+        if (!approvalDate) {
+            return res.status(400).json({ 
+                message: 'Approval date is required',
+                field: 'approvalDate'
+            });
+        }
+        
+        if (!reviewCycleYears) {
+            return res.status(400).json({ 
+                message: 'Review cycle is required',
+                field: 'reviewCycleYears'
+            });
+        }
+        
+        if (!approvalValidity) {
+            return res.status(400).json({ 
+                message: 'Approval validity date is required',
+                field: 'approvalValidity'
+            });
+        }
+
         // Validate the department exists
         const departmentExists = await Department.findById(departmentId);
         if (!departmentExists) {
-            return res.status(404).json({ 
+            return res.status(400).json({ 
                 message: 'Department not found',
-                details: `Department with ID ${departmentId} does not exist` 
+                details: `Department with ID ${departmentId} does not exist`,
+                field: 'department'
             });
         }
 
