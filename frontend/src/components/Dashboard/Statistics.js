@@ -12,7 +12,7 @@ const Statistics = ({ departmentId }) => {
 
     return {
       total: filteredPolicies.length,
-      active: filteredPolicies.filter(policy => policy.status === 'active').length,
+      active: filteredPolicies.filter(policy => policy.status === 'valid').length,
       expired: filteredPolicies.filter(policy => policy.status === 'expired').length
     };
   }, [policies, departmentId]);

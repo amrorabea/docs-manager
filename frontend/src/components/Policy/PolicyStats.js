@@ -1,7 +1,17 @@
 import React from 'react';
 import './Policy.css';
 
-const PolicyStats = ({ totalPolicies, activePolicies, needsUpdatePolicies }) => {
+const PolicyStats = ({ policies }) => {
+  // Calculate statistics
+  const totalPolicies = policies?.length || 0;
+  const activePolicies = policies?.filter(policy => 
+    new Date(policy.approvalValidity) > new Date() && 
+    policy.status !== 'expired'
+  ).length || 0;
+  const needsUpdatePolicies = policies?.filter(policy => 
+    new Date(policy.approvalValidity) < new Date(new Date().setMonth(new Date().getMonth() + 3))
+  ).length || 0;
+
   return (
     <div className="policy-stats">
       <div className="stat-card">

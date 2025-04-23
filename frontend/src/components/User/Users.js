@@ -292,42 +292,45 @@ const Users = () => {
           </thead>
           <tbody>
             {users.length > 0 ? (
-              users.map(user => (
-                <tr key={user._id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>
-                    <span className={`role-badge ${user.role}`}>
-                      {user.role === 'admin' ? 'مسؤول' : 'مستخدم'}
-                    </span>
-                  </td>
-                  <td>{new Date(user.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                  })}</td>
-                  <td className="actions">
-                    {isAdmin ? (
-                      <>
-                        <button 
-                          className="edit-btn" 
-                          onClick={() => handleEditUser(user)}
-                        >
-                          تعديل
-                        </button>
-                        <button 
-                          className="delete-btn" 
-                          onClick={() => handleDeleteUser(user._id)}
-                        >
-                          حذف
-                        </button>
-                      </>
-                    ) : (
-                      <span className="user-info-text">للإدارة فقط</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+              users.map(user => {
+                // Skip rendering admin users
+                if (user.role === 'admin') return null;
+                
+                return (
+                  <tr key={user._id}>
+                    <td>{user.name}</td>
+                    <td>{user.email}</td>
+                    <td>
+                      <span className="role-badge user">مستخدم</span>
+                    </td>
+                    <td>{new Date(user.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    })}</td>
+                    <td className="actions">
+                      {isAdmin ? (
+                        <>
+                          <button 
+                            className="edit-btn" 
+                            onClick={() => handleEditUser(user)}
+                          >
+                            تعديل
+                          </button>
+                          <button 
+                            className="delete-btn" 
+                            onClick={() => handleDeleteUser(user._id)}
+                          >
+                            حذف
+                          </button>
+                        </>
+                      ) : (
+                        <span className="user-info-text">للإدارة فقط</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="5" className="no-users">لا يوجد مستخدمين</td>

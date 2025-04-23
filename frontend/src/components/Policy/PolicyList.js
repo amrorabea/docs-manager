@@ -67,6 +67,10 @@ const PolicyList = () => {
     }
   };
 
+  const handleClearContentSearch = () => {
+    setSearchResults(null);
+  };
+
   const handleDeletePolicy = async (id) => {
     if (window.confirm('هل أنت متأكد من حذف هذه السياسة؟')) {
       try {
@@ -129,6 +133,13 @@ const PolicyList = () => {
     }
   };
 
+  const handleClearSearch = () => {
+    console.log('Clear search clicked');
+    setIsSearchMode(false);
+    setSearchQuery('');
+    refreshPolicies();
+  };
+
   // Create actions component that includes both add policy and logout buttons
   const Actions = () => (
     <div className="header-actions">
@@ -163,19 +174,17 @@ const PolicyList = () => {
       title="قائمة السياسات" 
       actions={<Actions />}
     >
-      {/* Search component */}
-      <SearchBar onSearch={handleSearch} />
-      
       {/* Content search bar */}
       <ContentSearchBar 
         onSearch={handleContentSearch}
         isLoading={isContentSearching}
+        onClear={handleClearContentSearch}
       />
 
       {/* Show search results if available */}
       {searchResults && (
         <div className="search-results">
-          <h3>نتائج البحث في المحتوى ({searchResults.length})</h3>
+          <h3>نتائج البحث في المحتوى ({searchResults.length} سياسة)</h3>
           {searchResults.length === 0 ? (
             <p>لا توجد نتائج مطابقة للبحث</p>
           ) : (
@@ -186,11 +195,20 @@ const PolicyList = () => {
                     <h4>{result.policy.name}</h4>
                     <span className="file-name">{result.policy.fileName}</span>
                     <span className="department-name">{result.policy.department}</span>
+                    <span className="occurrence-count">
+                      عدد مرات الظهور: {result.totalOccurrences}
+                    </span>
                   </div>
                   <div className="matches-container">
                     {result.matches.map((match, index) => (
                       <div key={index} className="match-item">
-                        <div className="line-number">السطر {match.lineNumber}</div>
+                        <div className="location-info">
+                          {match.occurrences > 1 && (
+                            <span className="line-occurrences">
+                              ({match.occurrences} مرات في هذا السطر)
+                            </span>
+                          )}
+                        </div>
                         <p className="excerpt" dangerouslySetInnerHTML={{
                           __html: match.excerpt.replace(
                             new RegExp(`(${match.highlight})`, 'gi'),
@@ -208,7 +226,7 @@ const PolicyList = () => {
       )}
       
       {/* Statistics component */}
-      <Statistics departmentId={selectedDepartment} />
+      <Statistics policies={policies} />
       
       {/* Department filter */}
       <div className="policy-filters">
@@ -224,23 +242,22 @@ const PolicyList = () => {
           ))}
         </select>
         
-        {isSearchMode && (
-          <div className="search-info">
-            <span>نتائج البحث عن: {searchQuery}</span>
-            <Button 
-              variant="secondary" 
-              size="small" 
-              onClick={() => {
-                console.log('Clear search clicked');
-                setIsSearchMode(false);
-                setSearchQuery('');
-                refreshPolicies();
-              }}
-            >
-              إلغاء البحث
-            </Button>
-          </div>
-        )}
+        <div className="filters-group">
+          <SearchBar onSearch={handleSearch} />
+          
+          {isSearchMode && (
+            <div className="search-info">
+              <span>نتائج البحث عن: {searchQuery}</span>
+              <Button 
+                variant="secondary" 
+                size="small" 
+                onClick={handleClearSearch}
+              >
+                إلغاء البحث
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Error message */}

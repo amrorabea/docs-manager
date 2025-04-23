@@ -313,17 +313,27 @@ exports.searchPolicyContent = async (req, res) => {
           buffer: response.data
         });
 
-        // Split text into lines
-        const lines = text.split('\n');
+        // Split text into sentences and filter empty ones
+        const sentences = text.split(/[.!?]\s+/).filter(s => s.trim());
         const matches = [];
+        let totalOccurrences = 0;
 
-        // Search through each line
-        lines.forEach((line, index) => {
-          if (line.toLowerCase().includes(query.toLowerCase())) {
+        sentences.forEach((sentence, index) => {
+          const regex = new RegExp(query, 'gi');
+          const occurrences = (sentence.match(regex) || []).length;
+
+          if (occurrences > 0) {
+            totalOccurrences += occurrences;
+            
+            // Get only previous sentence and current sentence
+            const start = Math.max(0, index - 1);
+            const end = index + 1;
+            const context = sentences.slice(start, end + 1).join('. ');
+
             matches.push({
-              lineNumber: index + 1,
-              excerpt: line.trim(),
-              highlight: query
+              excerpt: context.trim() + '.',
+              highlight: query,
+              occurrences
             });
           }
         });
@@ -334,9 +344,10 @@ exports.searchPolicyContent = async (req, res) => {
               _id: policy._id,
               name: policy.name,
               department: policy.department?.name,
-              fileName: policy.wordFileUrl.split('/').pop() // Extract filename from URL
+              fileName: policy.wordFileUrl.split('/').pop()
             },
-            matches
+            matches,
+            totalOccurrences
           });
         }
       } catch (error) {
