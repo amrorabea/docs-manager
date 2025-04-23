@@ -1,12 +1,24 @@
 import { axiosPrivate } from './api';
+import axios from 'axios';
 
 export const getAllUsers = async () => {
   try {
-    console.log('Fetching all users');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Fetching all users');
+    }
     const response = await axiosPrivate.get('/api/users/all');
-    console.log('Users fetched successfully:', response.data);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Users fetched successfully:', response.data.length);
+    }
     return response.data;
   } catch (error) {
+    // Skip error handling for canceled requests
+    if (axios.isCancel(error) || (error.isCanceled)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('User fetch request was canceled');
+      }
+      throw error;
+    }
     console.error('Error fetching users:', error);
     throw error;
   }
@@ -14,11 +26,22 @@ export const getAllUsers = async () => {
 
 export const getUserById = async (userId) => {
   try {
-    console.log(`Fetching user with ID: ${userId}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Fetching user with ID: ${userId}`);
+    }
     const response = await axiosPrivate.get(`/api/users/user/${userId}`);
-    console.log('User fetched successfully:', response.data);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('User fetched successfully');
+    }
     return response.data;
   } catch (error) {
+    // Skip error handling for canceled requests
+    if (axios.isCancel(error) || (error.isCanceled)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`User fetch request for ${userId} was canceled`);
+      }
+      throw error;
+    }
     console.error(`Error fetching user ${userId}:`, error);
     throw error;
   }
@@ -26,11 +49,22 @@ export const getUserById = async (userId) => {
 
 export const registerUser = async (userData) => {
   try {
-    console.log('Registering new user with data:', userData);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Registering new user');
+    }
     const response = await axiosPrivate.post('/api/users/register', userData);
-    console.log('User registered successfully:', response.data);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('User registered successfully');
+    }
     return response.data;
   } catch (error) {
+    // Skip error handling for canceled requests
+    if (axios.isCancel(error) || (error.isCanceled)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('User registration request was canceled');
+      }
+      throw error;
+    }
     console.error('Error registering user:', error);
     // Log detailed error information
     if (error.response) {
@@ -45,14 +79,25 @@ export const registerUser = async (userData) => {
 
 export const updateUser = async (userId, userData) => {
   try {
-    console.log(`Updating user ${userId} with data:`, userData);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Updating user ${userId}`);
+    }
     const response = await axiosPrivate.put('/api/users/update', {
       id: userId,
       ...userData
     });
-    console.log('User updated successfully:', response.data);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('User updated successfully');
+    }
     return response.data;
   } catch (error) {
+    // Skip error handling for canceled requests
+    if (axios.isCancel(error) || (error.isCanceled)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`User update request for ${userId} was canceled`);
+      }
+      throw error;
+    }
     console.error(`Error updating user ${userId}:`, error);
     throw error;
   }
@@ -60,11 +105,22 @@ export const updateUser = async (userId, userData) => {
 
 export const deleteUser = async (userId) => {
   try {
-    console.log(`Deleting user ${userId}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Deleting user ${userId}`);
+    }
     const response = await axiosPrivate.delete(`/api/users/delete/${userId}`);
-    console.log('User deleted successfully:', response.data);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('User deleted successfully');
+    }
     return response.data;
   } catch (error) {
+    // Skip error handling for canceled requests
+    if (axios.isCancel(error) || (error.isCanceled)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`User deletion request for ${userId} was canceled`);
+      }
+      throw error;
+    }
     console.error(`Error deleting user ${userId}:`, error);
     throw error;
   }

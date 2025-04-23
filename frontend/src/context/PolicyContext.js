@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { getPolicies, searchPolicies } from '../services/policyService';
 import { getDepartments } from '../services/departmentService';
 import AuthContext from './AuthContext'; // Import AuthContext
@@ -17,6 +17,10 @@ export const PolicyProvider = ({ children }) => {
     draft: 0
   });
   
+  // Prevent duplicate API calls
+  const fetchingPolicies = useRef(false);
+  const fetchingDepartments = useRef(false);
+  
   // Get auth context to check authentication status and handle auth errors
   const { auth, logout } = useContext(AuthContext);
 
@@ -27,18 +31,40 @@ export const PolicyProvider = ({ children }) => {
       return;
     }
     
+    // Prevent duplicate calls
+    if (fetchingPolicies.current) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Already fetching policies, skipping duplicate request');
+      }
+      return;
+    }
+    
+    fetchingPolicies.current = true;
+    
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching policies...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Fetching policies...');
+      }
       
       const data = await getPolicies();
-      console.log(`Retrieved ${data.length} policies`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Retrieved ${data.length} policies`);
+      }
       setPolicies(data);
       
       // Calculate stats
       updateStats(data);
     } catch (err) {
+      // Skip error handling for canceled requests
+      if (err.isCanceled) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Policy fetch request was canceled');
+        }
+        return;
+      }
+      
       console.error('Error fetching policies:', err);
       
       // Handle authentication errors
@@ -53,6 +79,7 @@ export const PolicyProvider = ({ children }) => {
       setPolicies([]);
     } finally {
       setLoading(false);
+      fetchingPolicies.current = false;
     }
   };
 
@@ -66,18 +93,30 @@ export const PolicyProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      console.log(`Searching policies with query: "${query}", departmentId: ${departmentId || 'none'}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Searching policies with query: "${query}", departmentId: ${departmentId || 'none'}`);
+      }
       
       const data = await searchPolicies(query, departmentId);
-      console.log(`Retrieved ${data.length} policies from search`);
-      if (data.length === 0) {
-        console.log('No search results found - this will display "لا توجد نتائج مطابقة للبحث"');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Retrieved ${data.length} policies from search`);
+        if (data.length === 0) {
+          console.log('No search results found - this will display "لا توجد نتائج مطابقة للبحث"');
+        }
       }
       setPolicies(data);
       
       // Update stats for the search results
       updateStats(data);
     } catch (err) {
+      // Skip error handling for canceled requests
+      if (err.isCanceled) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Policy search request was canceled');
+        }
+        return;
+      }
+      
       console.error('Error searching policies:', err);
       
       // Handle authentication errors
@@ -107,12 +146,34 @@ export const PolicyProvider = ({ children }) => {
       return;
     }
     
+    // Prevent duplicate calls
+    if (fetchingDepartments.current) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Already fetching departments, skipping duplicate request');
+      }
+      return;
+    }
+    
+    fetchingDepartments.current = true;
+    
     try {
-      console.log('Fetching departments...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Fetching departments...');
+      }
       const data = await getDepartments();
-      console.log(`Retrieved ${data.length} departments`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Retrieved ${data.length} departments`);
+      }
       setDepartments(data);
     } catch (err) {
+      // Skip error handling for canceled requests
+      if (err.isCanceled) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Department fetch request was canceled');
+        }
+        return;
+      }
+      
       console.error('Error fetching departments:', err);
       
       // Handle authentication errors
@@ -123,12 +184,16 @@ export const PolicyProvider = ({ children }) => {
       }
       
       setDepartments([]);
+    } finally {
+      fetchingDepartments.current = false;
     }
   };
 
   // Fetch data when auth changes
   useEffect(() => {
-    console.log('Auth state changed, accessToken exists:', !!auth?.accessToken);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Auth state changed, accessToken exists:', !!auth?.accessToken);
+    }
     
     if (auth?.accessToken) {
       fetchPolicies();
@@ -145,6 +210,11 @@ export const PolicyProvider = ({ children }) => {
       });
       setLoading(false);
     }
+    
+    // Cleanup function to handle component unmount
+    return () => {
+      // Nothing to clean up, but could cancel any pending requests here
+    };
   }, [auth?.accessToken]);
 
   return (

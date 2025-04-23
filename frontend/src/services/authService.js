@@ -1,98 +1,99 @@
 import axios from './api';
 import { jwtDecode } from 'jwt-decode';
+import { loginRequest } from './api';
 
-// Utility function to clear all authentication-related data
+// Optimized utility function to clear all authentication-related data
 export const clearAuthData = () => {
-  console.log('Clearing all authentication data');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Clearing authentication data');
+  }
   
   // Clear both localStorage and sessionStorage
   const storageTypes = [localStorage, sessionStorage];
   
-  storageTypes.forEach(storage => {
-    // Clear all known auth-related storage items
-    storage.removeItem('accessToken');
-    storage.removeItem('user');
-    storage.removeItem('isAdmin');
-    storage.removeItem('lastLogin');
-    storage.removeItem('authState');
-    storage.removeItem('hasLoggedIn');
-    
-    // Find and clear any other items that might contain auth data
-    const authRelatedKeys = [];
-    for (let i = 0; i < storage.length; i++) {
-      const key = storage.key(i);
-      if (key && (
-        key.toLowerCase().includes('token') || 
-        key.toLowerCase().includes('auth') || 
-        key.toLowerCase().includes('user') ||
-        key.toLowerCase().includes('login') ||
-        key.toLowerCase().includes('session')
-      )) {
-        authRelatedKeys.push(key);
-      }
-    }
-    
-    // Remove all identified auth-related items
-    authRelatedKeys.forEach(key => storage.removeItem(key));
-  });
-  
-  // Super aggressive cookie clearing - clear cookies on all possible paths and domains
-  const cookieNames = ['jwt', 'token', 'refresh_token', 'access_token', 'id_token', 'auth', 'session'];
-  const pathsToTry = ['/', '/api', '/auth', '', '/refresh', '/logout'];
-  const domainsToTry = [
-    window.location.hostname,
-    `.${window.location.hostname}`,
-    window.location.hostname.split('.').slice(1).join('.'),
-    ''
+  // Define known auth keys to remove
+  const knownAuthKeys = [
+    'accessToken',
+    'user',
+    'isAdmin',
+    'lastLogin',
+    'authState',
+    'hasLoggedIn',
+    'csrfToken'
   ];
   
-  cookieNames.forEach(cookieName => {
-    // Standard approach
-    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
-    
-    // Try clearing with various combinations of path and domain
-    pathsToTry.forEach(path => {
-      domainsToTry.forEach(domain => {
-        if (domain) {
-          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain};`;
-        } else {
-          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path};`;
-        }
-        
-        // Also try with secure and httpOnly (though httpOnly can only be cleared by server)
-        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; secure;`;
-        if (domain) {
-          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; secure;`;
-        }
-        
-        // Try with SameSite variations
-        ['Strict', 'Lax', 'None'].forEach(sameSite => {
-          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; SameSite=${sameSite};`;
-          if (domain) {
-            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=${sameSite};`;
-          }
-          if (sameSite === 'None') {
-            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; SameSite=None; secure;`;
-            if (domain) {
-              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=None; secure;`;
-            }
-          }
-        });
-      });
+  storageTypes.forEach(storage => {
+    // Clear all known auth-related storage items
+    knownAuthKeys.forEach(key => storage.removeItem(key));
+  });
+  
+  // Simplified cookie clearing - focus on the most important cookies
+  const authCookies = ['jwt', 'XSRF-TOKEN', 'refresh_token', 'app.sid', 'connect.sid'];
+  const paths = ['/', '/api'];
+  
+  // Expire all auth cookies
+  authCookies.forEach(cookieName => {
+    paths.forEach(path => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path};`;
     });
   });
   
-  // Also try the traditional approach for all cookies
+  // Clear any other cookie that might exist
   const cookies = document.cookie.split(";");
   for (let i = 0; i < cookies.length; i++) {
     const cookie = cookies[i];
     const eqPos = cookie.indexOf("=");
     const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname};`;
+    if (name) {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+    }
   }
+};
+
+// Check token validity
+const isTokenValid = (token) => {
+  if (!token) return false;
   
-  console.log('All authentication data cleared');
+  try {
+    const decoded = jwtDecode(token);
+    // Check if token is expired
+    return decoded.exp * 1000 > Date.now();
+  } catch (error) {
+    console.error('Token validation error:', error);
+    return false;
+  }
+};
+
+// Set a last activity timestamp to detect idle sessions
+const updateLastActivity = () => {
+  localStorage.setItem('lastActivity', Date.now().toString());
+};
+
+// Check if the session is idle (no activity for X minutes)
+export const isSessionIdle = (maxIdleMinutes = 30) => {
+  const lastActivity = localStorage.getItem('lastActivity');
+  if (!lastActivity) return false;
+  
+  const idleTime = Date.now() - parseInt(lastActivity);
+  return idleTime > maxIdleMinutes * 60 * 1000;
+};
+
+// Set up listeners for idle detection
+export const setupIdleDetection = () => {
+  updateLastActivity();
+  
+  // Update activity timestamp on user interaction
+  ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
+    window.addEventListener(event, updateLastActivity, { passive: true });
+  });
+  
+  // Check for idle session every minute
+  setInterval(() => {
+    if (isSessionIdle()) {
+      console.log('Session idle detected, logging out');
+      logout();
+    }
+  }, 60 * 1000);
 };
 
 // Function to check and clear auth data on page load
@@ -100,9 +101,15 @@ const checkAndClearOnLoad = () => {
   // Check if user has explicitly logged in
   const hasExplicitlyLoggedIn = localStorage.getItem('hasLoggedIn') === 'true';
   
-  // If no explicit login, clear everything to prevent auto-refresh attempts
-  if (!hasExplicitlyLoggedIn) {
-    console.log('No explicit login detected on page load - clearing all auth cookies');
+  // Check if token is still valid
+  const accessToken = localStorage.getItem('accessToken');
+  const isValid = isTokenValid(accessToken);
+  
+  // If no explicit login or invalid token, clear everything
+  if (!hasExplicitlyLoggedIn || !isValid) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Auth data cleared: ${!hasExplicitlyLoggedIn ? 'No explicit login' : 'Invalid token'}`);
+    }
     clearAuthData();
   }
 };
@@ -112,34 +119,41 @@ checkAndClearOnLoad();
 
 export const login = async (credentials) => {
   try {
-    const response = await axios.post('/auth/handleLogin', credentials);
+    // Use the specialized login function for better CSRF token handling
+    const data = await loginRequest(credentials.email, credentials.password);
 
-    if (response.data && response.data.accessToken) {
-      const accessToken = response.data.accessToken;
-
-      // Decode the token to extract user info
-      const decodedUser = jwtDecode(accessToken);
-
-      console.log('Decoded user:', decodedUser);
+    if (data && data.accessToken) {
+      const accessToken = data.accessToken;
+      
+      // Use the user object directly from the API response
+      // instead of decoding the JWT, which might not include all user data
+      const user = data.user;
 
       // Store token and user info in localStorage
       localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('user', JSON.stringify(decodedUser));
+      localStorage.setItem('user', JSON.stringify(user));
       
       // Set the flag to indicate explicit login
       localStorage.setItem('hasLoggedIn', 'true');
+      
+      // Set last activity timestamp
+      updateLastActivity();
+      
+      // Setup idle detection after login
+      setupIdleDetection();
 
       return {
         accessToken,
-        user: decodedUser
+        user
       };
     } else {
       console.warn('No access token received in login response');
       return {};
     }
   } catch (error) {
-    console.error('Login error:', error.response?.data || error.message);
-    throw error;
+    const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+    console.error('Login error:', errorMessage);
+    throw new Error(errorMessage);
   }
 };
 
@@ -158,6 +172,12 @@ export const register = async (userData) => {
 export const refresh = async () => {
   try {
     console.log('Attempting to refresh token');
+    
+    // Only attempt refresh if we have a valid refresh token cookie
+    if (!document.cookie.includes('jwt=')) {
+      throw new Error('No refresh token available');
+    }
+    
     const response = await axios.get('/refresh/handleRefreshToken');
     
     if (response.data && response.data.accessToken) {
@@ -165,14 +185,27 @@ export const refresh = async () => {
       console.log('New access token received, updating localStorage');
       localStorage.setItem('accessToken', accessToken);
 
-      // Decode the token to get user info
-      const decoded = jwtDecode(accessToken);
-      localStorage.setItem('user', JSON.stringify(decoded));
+      // Update last activity timestamp
+      updateLastActivity();
 
-      return {
-        ...response.data,
-        user: decoded
-      };
+      // Use the user object from the response if available
+      if (response.data.user) {
+        console.log('User data from refresh:', response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return {
+          accessToken,
+          user: response.data.user
+        };
+      } else {
+        // Fall back to decoding the token if no user object is provided
+        console.warn('No user object in refresh response, falling back to token decoding');
+        const decoded = jwtDecode(accessToken);
+        localStorage.setItem('user', JSON.stringify(decoded));
+        return {
+          accessToken,
+          user: decoded
+        };
+      }
     } else {
       console.warn('No access token received in refresh response');
       return null;
@@ -187,7 +220,11 @@ export const refresh = async () => {
 export const logout = async () => {
   try {
     console.log('Logging out user');
-    await axios.get('/logout/handleLogout');
+    
+    // Only make the logout call if we have a token (to avoid unnecessary API errors)
+    if (localStorage.getItem('accessToken')) {
+      await axios.get('/logout/handleLogout');
+    }
     
     // Clear all auth data
     clearAuthData();
@@ -199,15 +236,38 @@ export const logout = async () => {
     clearAuthData();
     
     throw error;
+  } finally {
+    // Navigate to login page
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   }
 };
 
 // Helper function to check if user is logged in
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken');
+  return isTokenValid(token);
 };
 
 // Helper function to get the current token
 export const getAccessToken = () => {
   return localStorage.getItem('accessToken');
+};
+
+// Helper function to get user info
+export const getUserInfo = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (error) {
+    console.error('Error parsing user info:', error);
+    return null;
+  }
+};
+
+// Helper function to check if user is admin
+export const isAdmin = () => {
+  const user = getUserInfo();
+  return user && user.role === 'admin';
 };

@@ -1,8 +1,17 @@
 const jwt = require('jsonwebtoken');
 
-exports.verifyJWT = (req, res, next) => {
+/**
+ * Middleware to verify if the user has admin role
+ * Must be used after verifyJWT middleware
+ */
+exports.verifyAdmin = (req, res, next) => {
+    // Simple check if user already set by verifyJWT
+    if (req.user && req.user.role === 'admin') {
+        return next();
+    }
+
+    // Otherwise verify from token again
     const authHeader = req.headers.authorization || req.headers.Authorization;
-    
     if (!authHeader?.startsWith('Bearer ')) {
         return res.status(401).json({ message: 'Unauthorized: No token provided' });
     }
@@ -18,13 +27,18 @@ exports.verifyJWT = (req, res, next) => {
                 return res.status(403).json({ message: 'Forbidden: Invalid token' });
             }
             
-            // Add more user information to the request
+            // Check if user has admin role
+            if (!decoded.role || decoded.role !== 'admin') {
+                return res.status(403).json({ message: 'Forbidden: Admin access required' });
+            }
+            
+            // Pass the user info to the next middleware
             req.user = {
                 email: decoded.email,
-                role: decoded.role || 'user' // Default to 'user' if role not specified
+                role: decoded.role
             };
             
             next();
         }
     );
-}
+}; 

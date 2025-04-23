@@ -1,17 +1,39 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 exports.registerUser = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(409).json({ message: 'User already exists' });
+        const { name, email, password, role = 'user' } = req.body;
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, email, password: hashedPassword, role });
-        res.status(201).json({ message: 'User created successfully', user });
+        // Check if email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(409).json({ message: 'Email already exists' });
+        }
+
+        // Hash password
+        const hashedPwd = await bcrypt.hash(password, 10);
+
+        // Create new user with default role of 'user'
+        // Only allow 'admin' role if the request is from an admin
+        const userRole = req.user?.role === 'admin' ? role : 'user';
+
+        const result = await User.create({
+            name,
+            email,
+            password: hashedPwd,
+            role: userRole
+        });
+
+        res.status(201).json({ 
+            success: true,
+            message: 'User created successfully',
+            userId: result._id
+        });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        console.error('Error registering user:', err);
+        res.status(500).json({ message: 'Failed to register user' });
     }
 };
 
@@ -24,74 +46,142 @@ exports.loginUser = async (req, res) => {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(401).json({ message: 'Invalid password' });
 
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-            expiresIn: '1d',
+        // Use ACCESS_TOKEN_SECRET consistently across the application
+        const accessToken = jwt.sign(
+            { 
+                email: user.email,
+                role: user.role 
+            }, 
+            process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: '15m' } // Short-lived access token
+        );
+
+        // Create refresh token with longer expiration
+        const refreshToken = jwt.sign(
+            { email: user.email },
+            process.env.ACCESS_TOKEN_SECRET, // Use same secret for simplicity
+            { expiresIn: '7d' }
+        );
+
+        // Set refresh token in HTTP-only cookie
+        res.cookie('jwt', refreshToken, { 
+            httpOnly: true, 
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
-        res.json({ token });
+        res.json({ 
+            accessToken,
+            user: {
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
+        });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        console.error('Login error:', err);
+        res.status(500).json({ message: 'Login failed' });
     }
 };
 
 exports.logoutUser = (req, res) => {
-    res.clearCookie('token'); // if you're storing it in cookies
+    // Clear the jwt cookie
+    res.clearCookie('jwt', { 
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+    });
     res.json({ message: 'Logged out successfully' });
 };
 
 exports.updateUser = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { name, email, role } = req.body; // you can add more fields if needed
+        const userId = req.params.id;
 
-        const updated = await User.findByIdAndUpdate(
-            id,
-            { name, email, role },
+        // Get the user to validate permissions
+        const userToUpdate = await User.findById(userId);
+        if (!userToUpdate) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Security check: Only allow users to update their own data unless they're admin
+        if (req.user.email !== userToUpdate.email && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: You can only update your own user data' });
+        }
+
+        // Prepare update data
+        const updateData = { ...req.body };
+        
+        // Handle password update
+        if (updateData.password) {
+            updateData.password = await bcrypt.hash(updateData.password, 10);
+        }
+
+        // Only admin can change the role
+        if (updateData.role && req.user.role !== 'admin') {
+            delete updateData.role;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateData,
             { new: true }
-        );
+        ).select('-password');
 
-        if (!updated) return res.status(404).json({ message: 'User not found' });
-
-        res.json(updated);
+        res.json(updatedUser);
     } catch (err) {
-        res.status(500).json({ message: 'Error updating user', error: err });
+        console.error('Error updating user:', err);
+        res.status(500).json({ message: 'Failed to update user' });
     }
 };
 
-// Get all users
+// Get all users (admin only - already protected by middleware)
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
-        res.status(200).json(users);
+        const users = await User.find().select('-password'); // Exclude password
+        res.json(users);
     } catch (err) {
-        res.status(500).json({ message: 'Error fetching users', error: err });
+        console.error('Error fetching users:', err);
+        res.status(500).json({ message: 'Failed to fetch users' });
     }
 };
 
-// Get a single user by email
+// Get a single user 
 exports.getUser = async (req, res) => {
-    const { email } = req.params;
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: req.params.email }).select('-password');
+        
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.status(200).json(user);
+
+        // Security check: Only allow users to access their own data unless they're admin
+        if (req.user.email !== req.params.email && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: You can only access your own user data' });
+        }
+
+        res.json(user);
     } catch (err) {
-        res.status(500).json({ message: 'Error fetching user', error: err });
+        console.error('Error fetching user:', err);
+        res.status(500).json({ message: 'Failed to fetch user' });
     }
 };
 
-// Delete a user by ID
+// Delete a user (admin only - already protected by middleware)
 exports.deleteUser = async (req, res) => {
-    const { id } = req.params;
     try {
-        const user = await User.findByIdAndDelete(id);
-        if (!user) {
+        const userId = req.params.id;
+        
+        const result = await User.findByIdAndDelete(userId);
+        
+        if (!result) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.status(200).json({ message: 'User deleted successfully' });
+        
+        res.json({ message: 'User deleted successfully' });
     } catch (err) {
-        res.status(500).json({ message: 'Error deleting user', error: err });
+        console.error('Error deleting user:', err);
+        res.status(500).json({ message: 'Failed to delete user' });
     }
 };

@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import PolicyContext from '../../context/PolicyContext';
 import useAuth from '../../hooks/useAuth';
 import useToast from '../../hooks/useToast';
+import useAdminProtection from '../../hooks/useAdminProtection';
 import { createDepartment, updateDepartment, deleteDepartment } from '../../services/departmentService';
 import './Department.css';
 
@@ -9,12 +10,28 @@ const DepartmentList = () => {
   const { departments, setDepartments, loading, error: contextError } = useContext(PolicyContext);
   const { isAdmin } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { hasAccess } = useAdminProtection();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [editingId, setEditingId] = useState(null);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  
+  // Validated departments with error handling
+  const safeDepartments = useMemo(() => {
+    if (!departments || !Array.isArray(departments)) {
+      console.error('Invalid departments data:', departments);
+      return [];
+    }
+    return departments;
+  }, [departments]);
+
+  // Additional security check when component mounts
+  useEffect(() => {
+    // Log access attempt for security monitoring
+    console.log('Department management page accessed, user has admin privileges:', isAdmin);
+  }, [isAdmin]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -238,10 +255,10 @@ const DepartmentList = () => {
           <div className="department-actions-header">الإجراءات</div>
         </div>
         
-        {departments.length === 0 ? (
+        {safeDepartments.length === 0 ? (
           <div className="no-departments">لا توجد إدارات. أضف إدارة جديدة.</div>
         ) : (
-          departments.map(department => (
+          safeDepartments.map(department => (
             <div key={department._id} className="department-row">
               <div className="department-name">{department.name}</div>
               <div className="department-row-actions">
@@ -270,7 +287,7 @@ const DepartmentList = () => {
         )}
       </div>
       
-      {!isAdmin && !departments.length && (
+      {!isAdmin && !safeDepartments.length && (
         <div className="admin-notice">
           <p>فقط المسؤولون يمكنهم إضافة أو تعديل أو حذف الإدارات.</p>
         </div>

@@ -81,6 +81,42 @@
     color: #dc3545;
   }
 
+  /* Loading indicator styles */
+  .action-loading {
+    text-align: center;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    color: #007bff;
+    font-weight: 500;
+  }
+
+  /* Styles for disabled buttons */
+  .edit-btn:disabled, .delete-btn:disabled, 
+  button:disabled, .save-btn:disabled, .cancel-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .error-container {
+    padding: 20px;
+    border: 1px solid #f5c6cb;
+    background-color: #f8d7da;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .retry-btn {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
   select.form-control {
     width: 100%;
     padding: 8px;
@@ -123,4 +159,100 @@
     border-radius: 5px;
     text-align: center;
     color: #6c757d;
+  }
+
+  .role-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-block;
+  }
+
+  .role-badge.user {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+  }
+
+  .role-badge.admin {
+    background-color: #ede7f6;
+    color: #4527a0;
+    font-weight: 600;
+  }
+
+  /* Styles for the edit user form */
+  .edit-user-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .edit-user-title {
+    margin-bottom: 25px;
+    text-align: center;
+    color: #333;
+  }
+
+  .user-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-group label {
+    font-weight: 500;
+    color: #333;
+  }
+
+  .form-control {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  }
+
+  .form-control:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .save-btn, .cancel-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .save-btn {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  .cancel-btn {
+    background-color: #f44336;
+    color: white;
   }

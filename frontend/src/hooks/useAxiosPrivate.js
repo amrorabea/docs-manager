@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { axiosPrivate } from '../services/api';
 import useAuth from './useAuth';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const useAxiosPrivate = () => {
   const { auth, setAuth, logout } = useAuth();
@@ -11,19 +12,26 @@ const useAxiosPrivate = () => {
     // Request interceptor - adds the token to all requests
     const requestIntercept = axiosPrivate.interceptors.request.use(
       config => {
-        // Log request details for debugging
-        console.log(`Making ${config.method.toUpperCase()} request to: ${config.url}`);
+        // Log request details for debugging in development only
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Making ${config.method.toUpperCase()} request to: ${config.url}`);
+        }
         
         // If Authorization header isn't already set, add it from auth context
         if (!config.headers['Authorization'] && auth?.accessToken) {
-          console.log('Adding Authorization header with token');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Adding Authorization header with token');
+          }
           config.headers['Authorization'] = `Bearer ${auth.accessToken}`;
         }
         
         return config;
       },
       (error) => {
-        console.error('Request interceptor error:', error);
+        // Only log in development or if not a canceled request
+        if (process.env.NODE_ENV !== 'production' && !axios.isCancel(error)) {
+          console.error('Request interceptor error:', error);
+        }
         return Promise.reject(error);
       }
     );
@@ -31,20 +39,41 @@ const useAxiosPrivate = () => {
     // Response interceptor - handles token refresh on 401/403 errors
     const responseIntercept = axiosPrivate.interceptors.response.use(
       response => {
-        // Log successful responses for debugging
-        console.log(`Response from ${response.config.url}:`, {
-          status: response.status,
-          statusText: response.statusText
-        });
+        // Log successful responses for debugging in development only
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Response from ${response.config.url}:`, {
+            status: response.status,
+            statusText: response.statusText
+          });
+        }
         return response;
       },
       async (error) => {
-        // Log error responses for debugging
-        console.error(`Error response from ${error.config?.url}:`, {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data
-        });
+        // Check for canceled requests first, before trying to access error.config
+        if (axios.isCancel(error) || error.message?.includes('canceled') || error.message?.includes('abort')) {
+          if (process.env.NODE_ENV !== 'production') {
+            // Safely access config url if available
+            const url = error.config?.url || 'unknown endpoint';
+            console.log(`Request to ${url} was canceled`);
+          }
+          return Promise.reject({
+            isCanceled: true,
+            message: 'Request was canceled',
+            originalError: error
+          });
+        }
+        
+        // Now we can safely log error responses for debugging
+        if (error.config) {
+          console.error(`Error response from ${error.config.url}:`, {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data
+          });
+        } else {
+          // For non-cancellation errors without config, log with limited info
+          console.error('API error without detailed information:', error.message);
+        }
         
         const prevRequest = error?.config;
         
@@ -78,6 +107,15 @@ const useAxiosPrivate = () => {
             // Retry the original request with the new token
             return axiosPrivate(prevRequest);
           } catch (refreshError) {
+            // Skip error detail logging for canceled refresh requests
+            if (axios.isCancel(refreshError) || refreshError.message?.includes('canceled')) {
+              return Promise.reject({
+                isCanceled: true,
+                message: 'Token refresh request was canceled',
+                originalError: refreshError
+              });
+            }
+            
             console.error('Token refresh failed:', refreshError);
             
             // If refresh fails, log the user out and redirect to login

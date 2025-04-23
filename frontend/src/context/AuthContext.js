@@ -22,16 +22,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // This should be dynamically determined based on the user's role
-  // Check both role and isAdmin properties since the token might have either
-  const isAdmin = auth?.user?.role === 'admin' || auth?.user?.isAdmin === true;
+  // Standardize admin check to only use the role property
+  // This ensures consistency with backend checks
+  const isAdmin = auth?.user?.role === 'admin';
   
-  console.log("Auth in context: ", auth);
-  console.log("User role check:", { 
-    role: auth?.user?.role,
-    isAdmin: auth?.user?.isAdmin,
-    isAdminResult: isAdmin
-  });
+  // Remove excessive console logging in production
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("Auth in context: ", { hasAuth: !!auth?.accessToken, hasUser: !!auth?.user });
+    if (auth?.user) {
+      console.log("User role:", auth.user.role, "isAdmin:", isAdmin);
+    }
+  }
 
   // Store auth in localStorage whenever it changes
   useEffect(() => {
