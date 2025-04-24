@@ -432,14 +432,15 @@ const Users = () => {
           </thead>
           <tbody>
             {users.length > 0 ? (
-              users.map(user => {
-                return (
+              users
+                .filter(user => !user.isAdmin && user.role !== 'admin')
+                .map(user => (
                   <tr key={user._id}>
                     <td>{user.name}</td>
                     <td>{user.email}</td>
                     <td>
-                      <span className={`role-badge ${user.role === 'admin' || user.isAdmin ? 'admin' : 'user'}`}>
-                        {user.role === 'admin' || user.isAdmin ? 'مسؤول' : 'مستخدم'}
+                      <span className="role-badge user">
+                        مستخدم
                       </span>
                     </td>
                     <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
@@ -448,7 +449,7 @@ const Users = () => {
                       day: '2-digit'
                     }) : 'N/A'}</td>
                     <td className="actions">
-                      {isAdmin ? (
+                      {isAdmin && (
                         <>
                           <button 
                             className="edit-btn" 
@@ -465,13 +466,10 @@ const Users = () => {
                             حذف
                           </button>
                         </>
-                      ) : (
-                        <span className="user-info-text">للإدارة فقط</span>
                       )}
                     </td>
                   </tr>
-                );
-              })
+              ))
             ) : (
               <tr>
                 <td colSpan="5" className="no-users">لا يوجد مستخدمين</td>
