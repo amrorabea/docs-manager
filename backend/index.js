@@ -145,40 +145,36 @@ app.use(bruteForceProtection.middleware());
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      // Add additional trusted origins as needed
+      'https://policieslog.com',
+      'https://www.policieslog.com',
+      // For development
+      'http://localhost:3000',
+      'http://localhost:5000'
     ];
     
-    // Allow requests with no origin (like mobile apps, curl, postman) in development only
-    if (!origin) {
-      if (process.env.NODE_ENV === 'production') {
-        logger.security('Blocked request with no origin');
+    // In production, strictly check origins
+    if (process.env.NODE_ENV === 'production') {
+      if (!origin || !allowedOrigins.includes(origin)) {
+        logger.security('Blocked request with invalid origin', { origin });
         return callback(new Error('Not allowed by CORS'));
-      } else {
-        return callback(null, true);
       }
     }
     
-    // Check against allowed origins
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      logger.security('CORS blocked request', { origin });
-      callback(new Error('Not allowed by CORS'));
-    }
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
-    'X-XSRF-TOKEN', 
+    'X-XSRF-TOKEN',
     'X-CSRF-Token',
     'X-Requested-With',
-    'Accept'
+    'Accept',
+    'Origin'
   ],
-  exposedHeaders: ['X-Rate-Limit', 'X-Cache', 'X-CSRF-Token', 'X-XSRF-TOKEN'],
-  maxAge: 86400, // 24 hours in seconds - cache preflight requests
+  exposedHeaders: ['X-CSRF-Token', 'X-XSRF-TOKEN'],
+  maxAge: 86400
 }));
 
 // Serve static files from uploads directory
