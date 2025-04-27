@@ -36,19 +36,18 @@ app.use(cookieParser());
 
 // Session configuration - required for CSRF protection
 app.use(session({
-  secret: sessionSecret,
+  secret: process.env.SESSION_SECRET,
+  name: '__Host-sid',
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 24 * 60 * 60 * 1000,
+    domain: process.env.NODE_ENV === 'production' ? '.policieslog.com' : undefined
+  },
   resave: false,
   saveUninitialized: false,
-  name: 'app.sid', // Change from default connect.sid
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/',
-  },
-  // Enable session rotation to prevent session fixation attacks
-  rolling: true,
+  rolling: true
 }));
 
 // Clear old session cookies if they exist
@@ -94,36 +93,15 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https://policieslog.com"],
+      connectSrc: ["'self'", "https://policieslog.com"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      formAction: ["'self'"],
-      workerSrc: ["'self'"],
-      manifestSrc: ["'self'"],
-      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
-    },
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
+    }
   },
-  crossOriginEmbedderPolicy: { policy: "credentialless" },
-  crossOriginOpenerPolicy: { policy: "same-origin" },
-  crossOriginResourcePolicy: { policy: "same-site" },
-  dnsPrefetchControl: { allow: false },
-  frameguard: { action: 'deny' },
-  hsts: { 
-    maxAge: 63072000, 
-    includeSubDomains: true,
-    preload: true 
-  },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  xssFilter: true,
-  noSniff: true,
-  permittedCrossDomainPolicies: { permittedPolicies: "none" },
-  expectCt: {
-    enforce: true,
-    maxAge: 30,
-  },
+  crossOriginEmbedderPolicy: { policy: "require-corp" },
+  crossOriginResourcePolicy: { policy: "same-site" }
 }));
 
 // Add security headers checking and sanitization
@@ -143,38 +121,19 @@ app.use(bruteForceProtection.middleware());
 
 // CORS configuration with enhanced security
 app.use(cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = [
-      'https://policieslog.com',
-      'https://www.policieslog.com',
-      // For development
-      'http://localhost:3000',
-      'http://localhost:5000'
-    ];
-    
-    // In production, strictly check origins
-    if (process.env.NODE_ENV === 'production') {
-      if (!origin || !allowedOrigins.includes(origin)) {
-        logger.security('Blocked request with invalid origin', { origin });
-        return callback(new Error('Not allowed by CORS'));
-      }
-    }
-    
-    return callback(null, true);
-  },
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://policieslog.com'  // Single origin instead of array
+    : ['http://localhost:3000', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
     'X-XSRF-TOKEN',
-    'X-CSRF-Token',
-    'X-Requested-With',
-    'Accept',
-    'Origin'
+    'X-CSRF-Token'
   ],
-  exposedHeaders: ['X-CSRF-Token', 'X-XSRF-TOKEN'],
-  maxAge: 86400
+  exposedHeaders: ['X-CSRF-Token'],
+  maxAge: 24 * 60 * 60 // 24 hours
 }));
 
 // Serve static files from uploads directory
@@ -283,37 +242,29 @@ const PORT = process.env.PORT || 5000;
 // Improved MongoDB connection
 const connectDB = async () => {
   try {
-    console.log('Connecting to MongoDB...');
-    
     await mongoose.connect(process.env.MONGO_URI, {
-      maxPoolSize: 10,
-      minPoolSize: 5,
-      serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      heartbeatFrequencyMS: 10000,
-      retryWrites: true,
-      retryReads: true,
+      family: 4 // Force IPv4
     });
     
-    console.log('MongoDB connected successfully');
-    
-    // Set up connection event handlers
     mongoose.connection.on('error', err => {
-      console.error('MongoDB connection error:', err);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected. Attempting to reconnect...');
+      logger.error('MongoDB error:', err);
+      // Attempt reconnection
       setTimeout(connectDB, 5000);
     });
-    
+
+    mongoose.connection.on('disconnected', () => {
+      logger.warn('MongoDB disconnected, attempting reconnection...');
+      setTimeout(connectDB, 5000);
+    });
+
     return true;
   } catch (err) {
-    console.error('MongoDB connection error:', err);
-    console.log('Retrying connection in 5 seconds...');
-    setTimeout(connectDB, 5000);
-    return false;
+    logger.error('MongoDB connection failed:', err);
+    process.exit(1);
   }
 };
 
@@ -329,12 +280,29 @@ const startServer = async () => {
     initScheduledTasks();
     
     // Set up graceful shutdown
-    process.on('SIGINT', () => {
-      mongoose.connection.close(() => {
-        console.log('MongoDB connection closed due to app termination');
-        process.exit(0);
-      });
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
+  }
+};
+
+const gracefulShutdown = async () => {
+  try {
+    logger.info('Received shutdown signal, starting graceful shutdown...');
+    
+    // Close server first to stop accepting new requests
+    server.close(() => {
+      logger.info('Express server closed');
     });
+
+    // Close MongoDB connection
+    await mongoose.connection.close();
+    logger.info('MongoDB connection closed');
+
+    // Exit process
+    process.exit(0);
+  } catch (err) {
+    logger.error('Error during shutdown:', err);
+    process.exit(1);
   }
 };
 

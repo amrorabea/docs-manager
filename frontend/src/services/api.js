@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-const BASE_URL = 'https://policieslog.com/api';
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://policieslog.com/api'
+  : 'http://localhost:5000';
 
 // Simple in-memory cache with size limit
 const cache = new Map();
@@ -16,7 +17,7 @@ const pendingControllers = new Map();
 export const axiosPublic = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,  // Needed for cookies (refresh token)
+  withCredentials: true,
   timeout: REQUEST_TIMEOUT
 });
 
