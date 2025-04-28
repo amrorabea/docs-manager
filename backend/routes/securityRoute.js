@@ -51,9 +51,9 @@ router.get('/csrf', generateToken, (req, res) => {
   res.json({ success: true, message: 'CSRF token generated' });
 });
 
-// Minimal CSRF token route for debugging
-router.get('/csrf-token', (req, res) => {
-  res.status(200).json({ token: 'test' });
+// CSRF token endpoint should be public
+router.get('/csrf-token', generateToken, (req, res) => {
+  res.status(200).json({ csrfToken: res.locals.csrfToken });
 });
 
 module.exports = router;
