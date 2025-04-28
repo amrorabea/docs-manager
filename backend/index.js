@@ -24,7 +24,7 @@ const app = express();
 
 // CORS middleware FIRST
 app.use(cors({
-  origin: ['https://policieslog.com', 'http://localhost:3000', 'http://localhost:5000'],
+  origin: ['https://policieslog.com', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
