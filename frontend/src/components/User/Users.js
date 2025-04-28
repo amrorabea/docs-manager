@@ -25,21 +25,21 @@ const Users = () => {
 
   // Use useCallback to prevent unnecessary re-renders
   const fetchUsers = useCallback(async () => {
-    // Don't attempt to fetch if not admin or already loading
-    if (!isAdmin || loading) return;
-    
+    // Don't attempt to fetch if not admin
+    if (!isAdmin) return;
+
     try {
       setLoading(true);
       setError(null);
       const response = await axiosPrivate.get('/api/users/all');
-      
+
       // Validate response data
       if (Array.isArray(response.data)) {
         setUsers(response.data);
       } else {
         throw new Error('Invalid response format');
       }
-      
+
       setLoading(false);
     } catch (err) {
       // Skip error handling for canceled requests
@@ -51,18 +51,18 @@ const Users = () => {
         setLoading(false);
         return;
       }
-      
+
       console.error('Error fetching users:', err);
-      
+
       let errorMessage = 'Failed to fetch users';
-      
+
       if (err.response) {
         console.error('Server response error:', {
           status: err.response.status,
           data: err.response.data,
           headers: err.response.headers
         });
-        
+
         if (err.response.status === 401) {
           errorMessage = 'Unauthorized: Please log in again';
         } else if (err.response.status === 403) {
@@ -86,11 +86,11 @@ const Users = () => {
           return;
         }
       }
-      
+
       setError(errorMessage);
       setLoading(false);
     }
-  }, [axiosPrivate, isAdmin, loading]);
+  }, [axiosPrivate, isAdmin]);
 
   // Extra security check to ensure admin rights on the page load
   useEffect(() => {
@@ -99,26 +99,25 @@ const Users = () => {
       return; // Don't fetch users if not admin
     }
     // Only fetch if not already loading
-    if (!loading) {
-      fetchUsers();
-    }
+    fetchUsers();
+
     // Cleanup function for canceling requests
     return () => {
       // Any cleanup if needed
     };
-  }, [isAdmin, fetchUsers, loading]);
+  }, [isAdmin, fetchUsers]);
 
   const handleDeleteUser = async (userId) => {
     // Prevent deleting if already in progress
     if (actionInProgress) return;
-    
+
     if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا المستخدم؟')) {
       try {
         setActionInProgress(true);
         setLoading(true); // Show loading state
-        
+
         const response = await axiosPrivate.delete(`/api/users/delete/${userId}`);
-        
+
         // Verify deletion was successful
         if (response.status >= 200 && response.status < 300) {
           // Update the users list by filtering out the deleted user
@@ -135,14 +134,14 @@ const Users = () => {
           setActionInProgress(false);
           return;
         }
-        
+
         console.error(`Error deleting user ${userId}:`, err);
-        
+
         let errorMessage = 'فشل في حذف المستخدم. الرجاء المحاولة مرة أخرى.';
         if (err.response?.data?.message) {
           errorMessage = err.response.data.message;
         }
-        
+
         alert(errorMessage);
       } finally {
         setLoading(false);
@@ -154,7 +153,7 @@ const Users = () => {
   // Function to start editing a user
   const handleEditUser = (user) => {
     if (actionInProgress) return;
-    
+
     setIsAddingUser(false);
     setEditingUser(user);
     setFormData({
@@ -168,7 +167,7 @@ const Users = () => {
   // Function to start adding a new user
   const handleAddUser = () => {
     if (actionInProgress) return;
-    
+
     setEditingUser(null);
     setIsAddingUser(true);
     setFormData({
@@ -191,34 +190,34 @@ const Users = () => {
   // Modify the handleSaveUser function
   const handleSaveUser = async (e) => {
     e.preventDefault();
-    
+
     // Prevent submitting if already in progress
     if (actionInProgress) return;
-    
+
     // Basic validation
     if (!formData.name.trim() || !formData.email.trim()) {
       alert('الرجاء ملء جميع الحقول المطلوبة');
       return;
     }
-    
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       alert('الرجاء إدخال بريد إلكتروني صحيح');
       return;
     }
-    
+
     try {
       setActionInProgress(true);
       setLoading(true);
-      
+
       // Prepare user data - always set role as 'user' for both new and existing users
       const userData = {
         ...formData,
         role: 'user',
         isAdmin: false // Ensure isAdmin is always false
       };
-      
+
       if (isAddingUser) {
         // Create new user
         if (!userData.password) {
@@ -227,7 +226,7 @@ const Users = () => {
           setActionInProgress(false);
           return;
         }
-        
+
         // Password validation
         if (userData.password.length < 8) {
           alert('يجب أن تكون كلمة المرور 8 أحرف على الأقل');
@@ -235,9 +234,9 @@ const Users = () => {
           setActionInProgress(false);
           return;
         }
-        
+
         const response = await axiosPrivate.post('/api/users/register', userData);
-        
+
         // Verify creation was successful
         if (response.status >= 200 && response.status < 300) {
           setIsAddingUser(false);
@@ -248,7 +247,7 @@ const Users = () => {
         // Update existing user - remove role from update
         delete userData.role; // Remove role from update data
         delete userData.isAdmin; // Remove isAdmin from update data
-        
+
         // If password is empty, remove it from the request
         if (!userData.password) {
           delete userData.password;
@@ -259,9 +258,9 @@ const Users = () => {
           setActionInProgress(false);
           return;
         }
-        
+
         const response = await axiosPrivate.put(`/api/users/update/${editingUser._id}`, userData);
-        
+
         // Verify update was successful
         if (response.status >= 200 && response.status < 300) {
           setEditingUser(null);
@@ -269,7 +268,7 @@ const Users = () => {
           throw new Error('Failed to update user');
         }
       }
-      
+
       fetchUsers();
     } catch (err) {
       // Skip error handling for canceled requests
@@ -278,17 +277,17 @@ const Users = () => {
         setActionInProgress(false);
         return;
       }
-      
+
       console.error('Error saving user:', err);
-      
+
       let errorMessage = 'فشل في حفظ المستخدم. الرجاء المحاولة مرة أخرى.';
-      
+
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.response && err.response.status === 409) {
         errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
       }
-      
+
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -299,7 +298,7 @@ const Users = () => {
   // Function to cancel editing/adding
   const handleCancel = () => {
     if (actionInProgress) return;
-    
+
     setEditingUser(null);
     setIsAddingUser(false);
   };
@@ -312,7 +311,7 @@ const Users = () => {
   if (loading && !editingUser && !isAddingUser && !actionInProgress) {
     return <div className="loading">جاري التحميل...</div>;
   }
-  
+
   if (error) {
     return (
       <div className="error-container">
@@ -329,7 +328,7 @@ const Users = () => {
         <h1 className="edit-user-title">
           {isAddingUser ? 'إضافة مستخدم جديد' : 'تعديل المستخدم'}
         </h1>
-        
+
         <form onSubmit={handleSaveUser} className="user-form">
           <div className="form-group">
             <label htmlFor="name">الاسم</label>
@@ -344,7 +343,7 @@ const Users = () => {
               disabled={actionInProgress}
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="email">البريد الإلكتروني</label>
             <input
@@ -358,7 +357,7 @@ const Users = () => {
               disabled={actionInProgress}
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">
               كلمة المرور {!isAddingUser && '(اتركها فارغة إذا لم ترغب في تغييرها)'}
@@ -375,21 +374,21 @@ const Users = () => {
               minLength={8}
             />
           </div>
-          
+
           {/* Remove the role selection completely */}
           <input type="hidden" name="role" value="user" />
-          
+
           <div className="form-actions">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="save-btn"
               disabled={actionInProgress || loading}
             >
               {actionInProgress ? 'جاري الحفظ...' : 'حفظ'}
             </button>
-            <button 
-              type="button" 
-              className="cancel-btn" 
+            <button
+              type="button"
+              className="cancel-btn"
               onClick={handleCancel}
               disabled={actionInProgress || loading}
             >
@@ -404,11 +403,11 @@ const Users = () => {
   return (
     <div className="users-container">
       <h1 className="users-title">إدارة المستخدمين</h1>
-      
+
       <div className="users-actions">
         {isAdmin && (
-          <Button 
-            onClick={handleAddUser} 
+          <Button
+            onClick={handleAddUser}
             variant="primary"
             disabled={actionInProgress}
           >
@@ -416,10 +415,10 @@ const Users = () => {
           </Button>
         )}
       </div>
-      
+
       {/* Show loading indicator during operations */}
       {actionInProgress && <div className="action-loading">جاري تنفيذ العملية...</div>}
-      
+
       <div className="users-table-container">
         <table className="users-table">
           <thead>
@@ -452,15 +451,15 @@ const Users = () => {
                     <td className="actions">
                       {isAdmin && (
                         <>
-                          <button 
-                            className="edit-btn" 
+                          <button
+                            className="edit-btn"
                             onClick={() => handleEditUser(user)}
                             disabled={actionInProgress}
                           >
                             تعديل
                           </button>
-                          <button 
-                            className="delete-btn" 
+                          <button
+                            className="delete-btn"
                             onClick={() => handleDeleteUser(user._id)}
                             disabled={actionInProgress}
                           >
@@ -470,7 +469,7 @@ const Users = () => {
                       )}
                     </td>
                   </tr>
-              ))
+                ))
             ) : (
               <tr>
                 <td colSpan="5" className="no-users">لا يوجد مستخدمين</td>
@@ -479,7 +478,7 @@ const Users = () => {
           </tbody>
         </table>
       </div>
-      
+
       {!isAdmin && !users.length && (
         <div className="admin-notice">
           <p>فقط المسؤولون يمكنهم إضافة أو تعديل أو حذف المستخدمين.</p>
