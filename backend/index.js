@@ -22,6 +22,21 @@ setupGlobalErrorHandlers();
 
 const app = express();
 
+// CORS middleware FIRST
+app.use(cors({
+  origin: ['https://policieslog.com', 'http://localhost:3000', 'http://localhost:5000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-XSRF-TOKEN',
+    'X-CSRF-Token'
+  ],
+  exposedHeaders: ['X-CSRF-Token'],
+  maxAge: 24 * 60 * 60 // 24 hours
+}));
+
 // Configure request logging early in the middleware stack
 app.use(logger.requestLogger());
 
@@ -36,7 +51,7 @@ app.use(cookieParser());
 
 // Session configuration - required for CSRF protection
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: sessionSecret, // Always set a secret
   name: '__Host-sid',
   cookie: {
     httpOnly: true,
@@ -118,21 +133,6 @@ app.use(createRateLimiter());
 
 // Brute force protection
 app.use(bruteForceProtection.middleware());
-
-// CORS configuration with enhanced security
-app.use(cors({
-  origin: ['https://policieslog.com', 'http://localhost:3000', 'http://localhost:5000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-XSRF-TOKEN',
-    'X-CSRF-Token'
-  ],
-  exposedHeaders: ['X-CSRF-Token'],
-  maxAge: 24 * 60 * 60 // 24 hours
-}));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -51,9 +51,9 @@ router.get('/csrf', generateToken, (req, res) => {
   res.json({ success: true, message: 'CSRF token generated' });
 });
 
-// Simple endpoint to get a CSRF token
-router.get('/csrf-token', generateToken, (req, res) => {
-  res.json({ message: 'CSRF token set in cookie' });
+// Minimal CSRF token route for debugging
+router.get('/csrf-token', (req, res) => {
+  res.status(200).json({ token: 'test' });
 });
 
-module.exports = router; 
+module.exports = router;
