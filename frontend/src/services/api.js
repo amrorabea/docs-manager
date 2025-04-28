@@ -147,14 +147,21 @@ axiosPrivate.interceptors.request.use(
   error => Promise.reject(error)
 );
 
-// Debug auth status for troubleshooting
-const debugAuthStatus = () => {
-  console.log({
-    accessToken: !!localStorage.getItem('accessToken'),
-    csrfToken: !!getCSRFToken(),
-    cookies: document.cookie,
-    currentPath: window.location.pathname
-  });
+// Debug helper for auth status
+export const debugAuthStatus = async () => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const csrfToken = localStorage.getItem('csrfToken');
+    return {
+      hasToken: !!token,
+      tokenExpiry: token ? JSON.parse(atob(token.split('.')[1])).exp : null,
+      hasCsrfToken: !!csrfToken,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Auth debug error:', error);
+    return { error: error.message };
+  }
 };
 
 // Handle authentication failures
@@ -465,4 +472,22 @@ export const loginRequest = async (credentials) => {
         }
         throw error;
     }
+};
+
+// Add timeout wrapper for long-running requests
+export const withExtendedTimeout = async (apiCall) => {
+  try {
+    const response = await Promise.race([
+      apiCall,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      )
+    ]);
+    return response;
+  } catch (error) {
+    if (error.message === 'Request timeout') {
+      throw new Error('Request took too long to complete');
+    }
+    throw error;
+  }
 };

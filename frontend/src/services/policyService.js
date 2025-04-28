@@ -1,4 +1,8 @@
-import { axiosPrivate, debugAuthStatus, withExtendedTimeout } from './api';
+import { 
+  axiosPrivate, 
+  withExtendedTimeout,
+  debugAuthStatus
+} from './api';
 import axios from 'axios';
 
 // Add a direct fetch function for policies that bypasses interceptors
@@ -30,12 +34,7 @@ const directFetch = async (url) => {
 };
 
 export const getPolicies = async () => {
-  try {
-    const response = await axiosPrivate.get('/api/policies/all');
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  return await withExtendedTimeout(axiosPrivate.get('/api/policies'));
 };
 
 export const getPolicy = async (id) => {
