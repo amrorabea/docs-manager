@@ -151,20 +151,25 @@ axiosPrivate.interceptors.response.use(
   response => response,
   async error => {
     const prevRequest = error?.config;
-    if (error?.response?.status === 403 && !prevRequest?.sent) {
-      prevRequest.sent = true;
+    
+    // If it's a 401 error and we haven't retried yet
+    if (error.response?.status === 401 && !prevRequest._retry) {
+      prevRequest._retry = true;
       try {
+        // Try to refresh the token
         const response = await axiosPublic.get('/auth/refresh');
-        const newAccessToken = response.data.accessToken;
+        const newToken = response.data.accessToken;
         
-        const auth = JSON.parse(localStorage.getItem('auth')) || {};
-        auth.accessToken = newAccessToken;
-        localStorage.setItem('auth', JSON.stringify(auth));
-        
-        prevRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-        return axiosPrivate(prevRequest);
-      } catch (err) {
-        return Promise.reject(err);
+        if (newToken) {
+          localStorage.setItem('accessToken', newToken);
+          prevRequest.headers['Authorization'] = `Bearer ${newToken}`;
+          return axiosPrivate(prevRequest);
+        }
+      } catch (refreshError) {
+        // If refresh fails, clear auth and redirect to login
+        clearAuthData();
+        window.location.href = '/login';
+        return Promise.reject(error);
       }
     }
     return Promise.reject(error);
@@ -438,49 +443,41 @@ export const ensureCSRFToken = async () => {
 export default axiosPublic;
 
 // Special login function that ensures CSRF token handling
-export const loginRequest = async (email, password) => {
+export const loginRequest = async (credentials) => {
   try {
-    // Always try to get a fresh token before login
+    // First get CSRF token
     await axiosPublic.get('/api/security/csrf-token');
     
-    // Get the token after the request
+    // Get token after request
     const csrfToken = getCSRFToken();
-    console.log('CSRF token for login:', csrfToken ? 'Found' : 'Not found');
     
-    // Use only headers that are allowed by the backend CORS configuration
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    // Include the CSRF token in the request body only, not in headers
-    // This avoids CORS preflight issues with custom headers
-    const data = { 
-      email, 
-      password,
-      _csrf: csrfToken // Include token in body only
-    };
-    
-    console.log('Sending login request with CSRF token in body');
-    
-    // Create a custom axios instance for this specific request
-    const loginAxios = axios.create({
-      baseURL: BASE_URL,
-      headers: { 'Content-Type': 'application/json' },
+    const response = await axiosPublic.post('/auth/login', {
+      ...credentials,
+      _csrf: csrfToken
+    }, {
       withCredentials: true,
-      timeout: REQUEST_TIMEOUT
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
-    
-    const response = await loginAxios.post('/auth/handleLogin', data, { headers });
+
+    if (!response.data?.accessToken) {
+      throw new Error('No access token received');
+    }
+
+    // Store the token
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+
     return response.data;
   } catch (error) {
-    // Provide more detailed error for debugging
-    if (error.message === 'Network Error') {
-      console.error('Login request failed (CORS issue):', error);
-      throw new Error('Unable to connect to the server. This may be a CORS issue.');
-    } else {
-      console.error('Login request failed:', error);
-      throw error;
+    if (error.response?.status === 401) {
+      throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
+    if (error.response?.status === 429) {
+      throw new Error('محاولات كثيرة للدخول. الرجاء المحاولة لاحقاً');
+    }
+    throw new Error('حدث خطأ أثناء تسجيل الدخول');
   }
 };
 

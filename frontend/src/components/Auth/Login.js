@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import { loginRequest } from '../../services/api';
 import './Auth.css';
 
 const Login = () => {
-  const { login, error: authError, loading: authLoading } = useAuth();
+  const { auth, login } = useAuth();  // Destructure auth from useAuth
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -37,23 +38,33 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Validate inputs
       if (!formData.email || !formData.password) {
         throw new Error('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
       }
 
-      // Call auth context login
-      const success = await login({
+      // Use the loginRequest function to get token
+      const loginData = await loginRequest({
         email: formData.email.trim(),
         password: formData.password
       });
 
-      if (success) {
+      // Use the login function from useAuth
+      if (loginData?.accessToken) {
+        await login(loginData);  // Changed from auth.login to login
         navigate(from, { replace: true });
+      } else {
+        throw new Error('فشل تسجيل الدخول');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || err.message || 'فشل تسجيل الدخول');
+      // Handle specific error types
+      if (err.response?.status === 401) {
+        setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      } else if (err.response?.status === 429) {
+        setError('محاولات كثيرة للدخول. الرجاء المحاولة لاحقاً');
+      } else {
+        setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
+      }
     } finally {
       setLoading(false);
     }
@@ -65,7 +76,6 @@ const Login = () => {
         <h2 className="auth-title">تسجيل الدخول</h2>
         
         {error && <div className="auth-error">{error}</div>}
-        {authError && !error && <div className="auth-error">{authError}</div>}
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -79,7 +89,7 @@ const Login = () => {
               required
               className="form-control"
               placeholder="أدخل بريدك الإلكتروني"
-              disabled={loading || authLoading}
+              disabled={loading}
             />
           </div>
           
@@ -94,16 +104,16 @@ const Login = () => {
               required
               className="form-control"
               placeholder="أدخل كلمة المرور"
-              disabled={loading || authLoading}
+              disabled={loading}
             />
           </div>
           
           <button 
             type="submit" 
             className="auth-button" 
-            disabled={loading || authLoading}
+            disabled={loading}
           >
-            {loading || authLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+            {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </button>
         </form>
       </div>
