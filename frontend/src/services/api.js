@@ -34,7 +34,7 @@ export const axiosPrivate = axios.create({
   try {
     // Always use the correct endpoint (no double /api/api)
     console.log('Fetching initial CSRF token on startup');
-    const response = await axiosPublic.get('/api/security/csrf-token');
+    const response = await axiosPublic.get('/security/csrf-token');
     const token = getCSRFToken();
     if (token) {
       console.log('Initial CSRF token obtained');
