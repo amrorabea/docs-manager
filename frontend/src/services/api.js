@@ -457,7 +457,7 @@ export const hasValidToken = () => {
 // Add a method to refresh CSRF token
 export const refreshCSRFToken = async () => {
   try {
-    await axiosPublic.get('/api/security/csrf-token');
+    await axiosPublic.get('/security/csrf-token');
     return true;
   } catch (error) {
     console.error('Failed to refresh CSRF token:', error);
@@ -472,8 +472,8 @@ export const ensureCSRFToken = async () => {
     console.log('No CSRF token found, fetching a new one');
     try {
       const endpoints = [
-        '/api/security/csrf-token',
-        '/api/security/csrf',
+        '/security/csrf-token',
+        '/security/csrf',
         '/'
       ];
       for (const endpoint of endpoints) {
@@ -523,7 +523,7 @@ export default axiosPublic;
 export const loginRequest = async (email, password) => {
   try {
     // Always try to get a fresh token before login
-    await axiosPublic.get('/api/security/csrf-token');
+    await axiosPublic.get('/security/csrf-token');
     
     // Get the token after the request
     const csrfToken = getCSRFToken();
@@ -574,7 +574,7 @@ const apiRequest = async (url, method = 'GET', data = null) => {
     if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
       // For login specifically, always get a fresh token
       if (url === '/auth/handleLogin') {
-        await axiosPublic.get('/api/security/csrf-token');
+        await axiosPublic.get('/security/csrf-token');
       }
       csrfToken = await ensureCSRFToken();
     }
