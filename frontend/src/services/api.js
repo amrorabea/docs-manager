@@ -453,7 +453,7 @@ export default axiosPublic;
 // Special login function that ensures CSRF token handling
 export const loginRequest = async (credentials) => {
     try {
-        const response = await axiosPublic.post('/auth/login', credentials, {
+        const response = await axiosPublic.post('/auth/handleLogin', credentials, {
             withCredentials: true,
             headers: {
                 'Content-Type': 'application/json'
