@@ -94,7 +94,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https://policieslog.com"],
-      connectSrc: ["'self'", "https://policieslog.com"],
+      connectSrc: ["'self'", "https://policieslog.com", "http://209.74.80.185:5000"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
@@ -122,7 +122,7 @@ app.use(bruteForceProtection.middleware());
 // CORS configuration with enhanced security
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? 'https://policieslog.com'  // Single origin instead of array
+    ? ['https://policieslog.com', 'http://209.74.80.185:5000']  // Add your IP
     : ['http://localhost:3000', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
