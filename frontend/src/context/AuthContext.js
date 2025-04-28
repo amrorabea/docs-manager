@@ -62,48 +62,45 @@ export const AuthProvider = ({ children }) => {
 
   // Initial session verification - prevent auto-refresh for users who haven't explicitly logged in
   useEffect(() => {
+    let triedRefresh = false;
     const verifyRefreshToken = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // First, check if the user has explicitly logged in before
         const hasExplicitlyLoggedIn = localStorage.getItem('hasLoggedIn') === 'true';
-        
         if (!hasExplicitlyLoggedIn) {
-          console.log('No previous login detected, skipping token refresh');
-          // Force clear all auth data to be safe
           clearAuthData(); 
           setLoading(false);
           return;
         }
 
-        // Check if there's a refresh token cookie before attempting to refresh
         const hasRefreshToken = document.cookie.split(';').some(item => item.trim().startsWith('jwt='));
-        
-        // Only try to refresh if we don't have a valid token but do have a refresh token cookie
-        if (!auth?.accessToken && hasRefreshToken && hasExplicitlyLoggedIn) {
-          console.log('Found refresh token cookie, attempting to refresh access token');
-          
-          try {
-            const response = await refresh();
-            if (response?.accessToken) {
-              setAuth(response);
+
+        // If we have no access token, but user has logged in before, try to refresh if possible
+        if (!auth?.accessToken && hasExplicitlyLoggedIn) {
+          if (hasRefreshToken) {
+            try {
+              const response = await refresh();
+              if (response?.accessToken) {
+                setAuth(response);
+                return;
+              }
+            } catch (refreshError) {
+              // Only clear auth if refresh fails (token expired or invalid)
+              clearAuthData();
+              localStorage.removeItem('hasLoggedIn');
+              setAuth({});
+              return;
             }
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
-            // Force clear all auth data on refresh error
-            clearAuthData();
-            localStorage.removeItem('hasLoggedIn');
+          } else {
+            // If refresh token is missing, do not clear auth immediately. Wait for next auth-required action.
+            // Optionally, you can set a flag to check again on next navigation or API call.
+            // For now, just skip refresh and keep user state as is.
+            console.warn('No refresh token cookie found. User will remain logged in until next auth-required action.');
           }
-        } else if (!hasRefreshToken) {
-          console.log('No refresh token cookie found, skipping token refresh');
-          // Ensure any potential leftover data is cleared if no refresh token exists
-          clearAuthData();
         }
       } catch (err) {
-        console.error('Session verification error:', err);
-        // Clear any potentially invalid auth state
         setAuth({});
         clearAuthData();
         localStorage.removeItem('hasLoggedIn');
