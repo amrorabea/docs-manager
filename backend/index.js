@@ -121,9 +121,7 @@ app.use(bruteForceProtection.middleware());
 
 // CORS configuration with enhanced security
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://policieslog.com'  // Single origin instead of array
-    : ['http://localhost:3000', 'http://localhost:5000'],
+  origin: ['https://policieslog.com', 'http://localhost:3000', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
