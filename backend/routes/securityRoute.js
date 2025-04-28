@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { verifyJWT } = require('../middleware/verifyJWT');
-const { generateToken } = require('../middleware/csrfProtection');
 
 /**
  * Security event logger endpoint
@@ -41,19 +40,6 @@ router.get('/verify-admin', verifyJWT, (req, res) => {
   const isAdmin = req.user?.role === 'admin';
   
   res.json({ isAdmin });
-});
-
-/**
- * Generate a fresh CSRF token
- * Useful when the client needs to refresh their CSRF token
- */
-router.get('/csrf', generateToken, (req, res) => {
-  res.json({ success: true, message: 'CSRF token generated' });
-});
-
-// CSRF token endpoint should be public
-router.get('/csrf-token', generateToken, (req, res) => {
-  res.status(200).json({ csrfToken: res.locals.csrfToken });
 });
 
 module.exports = router;

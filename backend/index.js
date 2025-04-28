@@ -10,7 +10,6 @@ const path = require('path');
 const { sanitizeBody } = require('./middleware/validateInput');
 const session = require('express-session');
 const crypto = require('crypto');
-const { verifyToken, generateToken } = require('./middleware/csrfProtection');
 const { checkSuspiciousHeaders, sanitizeReferrer } = require('./middleware/securityHeaders');
 const cookieParser = require('cookie-parser');
 const logger = require('./utils/logger');
@@ -24,16 +23,21 @@ const app = express();
 
 // CORS middleware FIRST
 app.use(cors({
-  origin: ['http://209.74.80.185:5000', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'],
+  origin: [
+    'https://policieslog.com',
+    'http://policieslog.com',
+    'http://209.74.80.185',
+    'http://209.74.80.185:5000',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
-    'Authorization', 
-    'X-XSRF-TOKEN',
-    'X-CSRF-Token'
+    'Authorization'
   ],
-  exposedHeaders: ['X-CSRF-Token'],
   maxAge: 24 * 60 * 60 // 24 hours
 }));
 
@@ -52,10 +56,10 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   process.exit(1);
 }
 
-// Cookie parser middleware - needed for CSRF
+// Cookie parser middleware
 app.use(cookieParser());
 
-// Session configuration - required for CSRF protection
+// Session configuration
 app.use(session({
   secret: sessionSecret, // Always set a secret
   name: '__Host-sid',
@@ -64,7 +68,8 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     maxAge: 24 * 60 * 60 * 1000,
-    domain: process.env.NODE_ENV === 'production' ? '209.74.80.185:5000' : undefined
+    // Use only the domain for production
+    domain: process.env.NODE_ENV === 'production' ? 'policieslog.com' : undefined
   },
   resave: false,
   saveUninitialized: false,
@@ -130,9 +135,6 @@ app.use(helmet({
 app.use(checkSuspiciousHeaders);
 app.use(sanitizeReferrer);
 
-// Generate CSRF tokens for all requests
-app.use(generateToken);
-
 app.use(compression());
 
 // Global rate limiter for all routes
@@ -148,45 +150,6 @@ app.use(express.json());
 
 // Apply sanitization globally to all routes with request bodies
 app.use(sanitizeBody);
-
-// Protect routes that modify data with CSRF verification
-// Skip for GET, HEAD, OPTIONS which should be idempotent
-app.use((req, res, next) => {
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    // Check for CSRF token in multiple locations
-    // This adds flexibility for clients and improves compatibility
-    const token = 
-      (req.body && req.body._csrf) || 
-      req.headers['x-csrf-token'] || 
-      req.headers['x-xsrf-token'] ||
-      req.cookies['XSRF-TOKEN'];
-    
-    // For auth endpoints, be more lenient with CSRF checks
-    // Many login forms may not properly support CSRF
-    if (req.path.includes('/auth/')) {
-      logger.debug('Authentication endpoint detected, CSRF requirements relaxed', { url: req.path });
-      
-      if (token) {
-        logger.debug('Auth endpoint with CSRF token present in some form, proceeding', { url: req.path });
-        next();
-      } else {
-        // For development, allow auth without CSRF
-        if (process.env.NODE_ENV !== 'production') {
-          logger.warn('Auth request without CSRF token allowed in development', { url: req.path });
-          next();
-        } else {
-          // In production, still enforce CSRF for auth
-          verifyToken(req, res, next);
-        }
-      }
-    } else {
-      // For non-auth endpoints, always verify CSRF token
-      verifyToken(req, res, next);
-    }
-  } else {
-    next();
-  }
-});
 
 // Import routes
 const policyAPI = require('./routes/api/policyAPI');
@@ -204,7 +167,7 @@ const logoutRoutes = require('./routes/logoutRoute');
 app.use('/', rootRoutes);
 app.use('/register', registerRoutes);
 
-// Apply CSRF token generation and rate limiting to auth routes
+// Apply rate limiting to auth routes
 app.use('/auth', authLimiter, authRoutes);
 
 app.use('/refresh', refreshRoutes);
@@ -213,14 +176,6 @@ app.use('/logout', logoutRoutes);
 // Security routes that don't require authentication
 app.use('/api/security', securityRoutes);
 app.use('/security', securityRoutes); // Allow /security/csrf-token without /api prefix
-
-// Force session creation for CSRF token endpoint
-app.use('/api/security/csrf-token', (req, res, next) => {
-  if (!req.session) {
-    req.session = {};
-  }
-  next();
-});
 
 // Cache health check endpoint
 app.get('/health', cacheMiddleware(60), (req, res) => {

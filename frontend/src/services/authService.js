@@ -18,8 +18,7 @@ export const clearAuthData = () => {
     'isAdmin',
     'lastLogin',
     'authState',
-    'hasLoggedIn',
-    'csrfToken'
+    'hasLoggedIn'
   ];
   
   storageTypes.forEach(storage => {
@@ -28,7 +27,7 @@ export const clearAuthData = () => {
   });
   
   // Simplified cookie clearing - focus on the most important cookies
-  const authCookies = ['jwt', 'XSRF-TOKEN', 'refresh_token', 'app.sid', 'connect.sid'];
+  const authCookies = ['jwt', 'refresh_token', 'app.sid', 'connect.sid'];
   const paths = ['/', '/api'];
   
   // Expire all auth cookies

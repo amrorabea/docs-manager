@@ -29,31 +29,6 @@ export const axiosPrivate = axios.create({
   timeout: REQUEST_TIMEOUT
 });
 
-// Initialize CSRF token on module load
-(async function fetchInitialCSRFToken() {
-  try {
-    // Always use the correct endpoint (no double /api/api)
-    console.log('Fetching initial CSRF token on startup');
-    const response = await axiosPublic.get('/security/csrf-token');
-    const token = getCSRFToken();
-    if (token) {
-      console.log('Initial CSRF token obtained');
-      localStorage.setItem('csrfToken', token);
-    } else {
-      console.warn('Failed to get CSRF token from cookie after request');
-      // Try to extract from response headers as fallback
-      const headerToken = response.headers['x-csrf-token'] || response.headers['x-xsrf-token'];
-      if (headerToken) {
-        console.log('Using CSRF token from response headers');
-        document.cookie = `XSRF-TOKEN=${headerToken}; path=/; max-age=${24 * 60 * 60}`;
-        localStorage.setItem('csrfToken', headerToken);
-      }
-    }
-  } catch (error) {
-    console.warn('Failed to fetch initial CSRF token:', error);
-  }
-})();
-
 // Debounce mechanism for repeated requests
 const pendingRequests = new Map();
 
@@ -69,7 +44,7 @@ const clearAuthData = () => {
   
   // Clear local storage
   const knownAuthKeys = [
-    'accessToken', 'user', 'isAdmin', 'lastLogin', 'authState', 'hasLoggedIn', 'csrfToken'
+    'accessToken', 'user', 'isAdmin', 'lastLogin', 'authState', 'hasLoggedIn'
   ];
   
   [localStorage, sessionStorage].forEach(storage => {
@@ -77,40 +52,12 @@ const clearAuthData = () => {
   });
   
   // Clear cookies
-  ['jwt', 'XSRF-TOKEN', 'refresh_token'].forEach(name => {
+  ['jwt', 'refresh_token'].forEach(name => {
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
   });
   
   // Clear cache
   cache.clear();
-};
-
-// Helper to get CSRF token from cookie
-const getCSRFToken = () => {
-  try {
-    // Try from cookie first
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'XSRF-TOKEN') {
-        // Always store in localStorage for reliability
-        localStorage.setItem('csrfToken', decodeURIComponent(value));
-        return decodeURIComponent(value);
-      }
-    }
-    // Try from localStorage fallback if we set it there
-    const storedToken = localStorage.getItem('csrfToken');
-    if (storedToken) {
-      console.log('Using CSRF token from localStorage');
-      return storedToken;
-    }
-    // If no token found, log a warning
-    console.warn('CSRF token not found in cookies or localStorage');
-    return null;
-  } catch (error) {
-    console.error('Error getting CSRF token:', error);
-    return null;
-  }
 };
 
 // Function to cancel previous identical requests
@@ -193,24 +140,6 @@ axiosPrivate.interceptors.request.use(
       if (accessToken) {
         // Add Authorization header with the token
         config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-
-      // For non-GET requests, ensure we have a CSRF token
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(config.method?.toUpperCase())) {
-        // Try to ensure we have a CSRF token before continuing
-        const token = await ensureCSRFToken();
-        if (token) {
-          // Add token in both formats to maximize compatibility
-          config.headers['X-CSRF-Token'] = token;
-          config.headers['X-XSRF-TOKEN'] = token;
-          
-          // For POST requests, add the token to the body as well for maximum compatibility
-          if (config.method === 'post' && config.data && typeof config.data === 'object') {
-            config.data._csrf = token;
-          }
-        } else {
-          console.warn('Could not obtain CSRF token for request');
-        }
       }
 
       // Handle caching for GET requests
@@ -312,23 +241,6 @@ axiosPrivate.interceptors.response.use(
           data: { message: 'لا يمكن الاتصال بالخادم. تحقق من اتصالك بالإنترنت.' }
         }
       });
-    }
-    
-    // Handle CSRF errors
-    if (error.response?.status === 403 && error.response?.data?.message?.includes('CSRF')) {
-      console.error('CSRF validation failed:', error);
-      // Refresh CSRF token instead of reloading the page
-      await refreshCSRFToken();
-      if (originalRequest) {
-        // Retry the request with new token
-        const token = getCSRFToken();
-        if (token) {
-          originalRequest.headers['X-CSRF-Token'] = token;
-          originalRequest.headers['X-XSRF-TOKEN'] = token;
-          return axiosPrivate(originalRequest);
-        }
-      }
-      return Promise.reject(error);
     }
     
     // Handle error cases where error.config is undefined
@@ -454,95 +366,23 @@ export const hasValidToken = () => {
   return !!localStorage.getItem('accessToken');
 };
 
-// Add a method to refresh CSRF token
-export const refreshCSRFToken = async () => {
-  try {
-    await axiosPublic.get('/security/csrf-token');
-    return true;
-  } catch (error) {
-    console.error('Failed to refresh CSRF token:', error);
-    return false;
-  }
-};
-
-// Ensure CSRF token is available before auth requests
-export const ensureCSRFToken = async () => {
-  let csrfToken = getCSRFToken();
-  if (!csrfToken) {
-    console.log('No CSRF token found, fetching a new one');
-    try {
-      const endpoints = [
-        '/security/csrf-token',
-        '/security/csrf',
-        '/'
-      ];
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Trying to fetch CSRF token from ${endpoint}`);
-          const response = await axiosPublic.get(endpoint);
-          console.log(`CSRF token response from ${endpoint}:`, response.status);
-          // Check if we got a token after this request
-          csrfToken = getCSRFToken();
-          if (csrfToken) {
-            // Always set in both cookie and localStorage
-            document.cookie = `XSRF-TOKEN=${csrfToken}; path=/; max-age=${24 * 60 * 60}`;
-            localStorage.setItem('csrfToken', csrfToken);
-            return csrfToken;
-          }
-          // If there's a token in headers, use that
-          const headerToken = response.headers['x-xsrf-token'] || response.headers['x-csrf-token'];
-          if (headerToken) {
-            console.log('Using CSRF token from response headers');
-            document.cookie = `XSRF-TOKEN=${headerToken}; path=/; max-age=${24 * 60 * 60}`;
-            localStorage.setItem('csrfToken', headerToken);
-            return headerToken;
-          }
-        } catch (endpointError) {
-          console.warn(`Failed to fetch CSRF token from ${endpoint}:`, endpointError);
-        }
-      }
-      console.error('Failed to fetch CSRF token from any endpoint');
-      return null;
-    } catch (error) {
-      console.error('Failed to fetch CSRF token:', error);
-      return null;
-    }
-  }
-  // Always set in both cookie and localStorage if found
-  if (csrfToken) {
-    document.cookie = `XSRF-TOKEN=${csrfToken}; path=/; max-age=${24 * 60 * 60}`;
-    localStorage.setItem('csrfToken', csrfToken);
-  }
-  return csrfToken;
-};
-
 // Export the default axios instance for public routes
 export default axiosPublic;
 
 // Special login function that ensures CSRF token handling
 export const loginRequest = async (email, password) => {
   try {
-    // Always try to get a fresh token before login
-    await axiosPublic.get('/security/csrf-token');
-    
-    // Get the token after the request
-    const csrfToken = getCSRFToken();
-    console.log('CSRF token for login:', csrfToken ? 'Found' : 'Not found');
-    
     // Use only headers that are allowed by the backend CORS configuration
     const headers = {
       'Content-Type': 'application/json',
     };
     
-    // Include the CSRF token in the request body only, not in headers
-    // This avoids CORS preflight issues with custom headers
     const data = { 
       email, 
-      password,
-      _csrf: csrfToken // Include token in body only
+      password
     };
     
-    console.log('Sending login request with CSRF token in body');
+    console.log('Sending login request');
     
     // Create a custom axios instance for this specific request
     const loginAxios = axios.create({
@@ -569,27 +409,10 @@ export const loginRequest = async (email, password) => {
 // API request function
 const apiRequest = async (url, method = 'GET', data = null) => {
   try {
-    // First ensure we have a CSRF token for non-GET requests
-    let csrfToken = null;
-    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      // For login specifically, always get a fresh token
-      if (url === '/auth/handleLogin') {
-        await axiosPublic.get('/security/csrf-token');
-      }
-      csrfToken = await ensureCSRFToken();
-    }
-    
     // Use only standard headers to avoid CORS preflight issues
     const headers = {
       'Content-Type': 'application/json',
     };
-    
-    // In development, log the token being used
-    if (csrfToken && process.env.NODE_ENV !== 'production') {
-      console.log('Using CSRF token for request:', csrfToken.substring(0, 6) + '...');
-    } else if (method !== 'GET') {
-      console.warn('No CSRF token available for request to ' + url);
-    }
 
     // Add Authorization header with the token if available
     const accessToken = localStorage.getItem('accessToken');
@@ -604,14 +427,7 @@ const apiRequest = async (url, method = 'GET', data = null) => {
     };
 
     if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      const dataWithToken = { ...data };
-      
-      // For POST requests, add the token as part of the body
-      if (csrfToken) {
-        dataWithToken._csrf = csrfToken;
-      }
-      
-      options.body = JSON.stringify(dataWithToken);
+      options.body = JSON.stringify(data);
     }
 
     // Create AbortController for fetch
@@ -632,12 +448,6 @@ const apiRequest = async (url, method = 'GET', data = null) => {
       // If the response indicates a CSRF error, log it clearly
       if (response.status === 403) {
         const responseData = await response.json();
-        if (responseData.error && responseData.error.includes('CSRF')) {
-          console.error('CSRF validation failed:', responseData.error);
-          console.debug('CSRF token used:', csrfToken);
-          // Refresh CSRF token for future requests
-          await refreshCSRFToken();
-        }
         throw new Error(responseData.error || 'Forbidden');
       }
 
@@ -695,23 +505,6 @@ axiosPublic.interceptors.request.use(
     try {
       // Special handling for auth endpoints
       if (config.url?.includes('/auth/')) {
-        const csrfToken = await ensureCSRFToken();
-        
-        // Add CSRF token to the body for POST requests instead of headers
-        // to avoid CORS preflight issues
-        if (csrfToken && config.method === 'post' && config.data) {
-          // If data is string (already stringified), parse it first
-          const data = typeof config.data === 'string' 
-            ? JSON.parse(config.data) 
-            : config.data;
-            
-          // Add CSRF token to the body
-          config.data = JSON.stringify({
-            ...data,
-            _csrf: csrfToken
-          });
-        }
-        
         // Only set standard headers that don't trigger CORS preflight
         config.headers['Content-Type'] = 'application/json';
       }
@@ -745,26 +538,6 @@ axiosPrivate.interceptors.request.use(
         // Delete Content-Type header if it exists to let the browser set it with correct boundary
         delete config.headers['Content-Type'];
         console.log('FormData detected: Content-Type header removed to allow browser to set it correctly');
-      } else if (config.method !== 'get') {
-        // For non-GET requests that aren't FormData, ensure CSRF token is set
-        const csrfToken = await ensureCSRFToken();
-        
-        // For POST/PUT/PATCH, add CSRF to body instead of headers when possible
-        // to avoid CORS preflight issues
-        if (csrfToken && ['post', 'put', 'patch'].includes(config.method) && config.data) {
-          // If data is string (already stringified), parse it first
-          const data = typeof config.data === 'string' 
-            ? JSON.parse(config.data) 
-            : config.data;
-            
-          // Add CSRF token to the body
-          config.data = JSON.stringify({
-            ...data,
-            _csrf: csrfToken
-          });
-        }
-        
-        // Only use the Authorization header which usually doesn't trigger CORS preflight
       }
       
       // Add Authorization header with the token if available
@@ -794,7 +567,6 @@ export const debugAuthStatus = () => {
     const authData = {
       accessToken: !!localStorage.getItem('accessToken'),
       refreshToken: document.cookie.includes('refresh_token'),
-      csrfToken: !!getCSRFToken(),
       user: localStorage.getItem('user'),
       isAdmin: localStorage.getItem('isAdmin') === 'true',
       cookies: document.cookie
