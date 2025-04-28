@@ -212,6 +212,7 @@ app.use('/logout', logoutRoutes);
 
 // Security routes that don't require authentication
 app.use('/api/security', securityRoutes);
+app.use('/security', securityRoutes); // Allow /security/csrf-token without /api prefix
 
 // Force session creation for CSRF token endpoint
 app.use('/api/security/csrf-token', (req, res, next) => {
