@@ -137,117 +137,36 @@ const addToCache = (key, value) => {
 
 // Add request interceptor to handle cancellation and timeouts
 axiosPrivate.interceptors.request.use(
-  async config => {
-    try {
-      // Generate a unique request ID based on URL and method
-      const requestId = `${config.method}-${config.url}`;
-      
-      // Don't cancel GET requests for resources that might change frequently
-      // This prevents excessive cancellations during navigation
-      const shouldCancelDuplicates = config.cancelDuplicates !== false && 
-        !(config.method === 'get' && config.url.includes('/api/notifications'));
-      
-      // Cancel any previous identical requests to avoid race conditions
-      if (shouldCancelDuplicates) {
-        cancelPreviousRequests(requestId);
-      }
-      
-      // Create an AbortController for this request
-      const controller = new AbortController();
-      config.signal = controller.signal;
-      pendingControllers.set(requestId, controller);
-      
-      // Set up automatic cancellation after timeout
-      const timeoutId = setTimeout(() => {
-        if (pendingControllers.has(requestId)) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn(`Request timed out: ${requestId}`);
-          }
-          controller.abort();
-          pendingControllers.delete(requestId);
-        }
-      }, config.timeout || REQUEST_TIMEOUT);
-      
-      // Store the timeout ID for cleanup
-      controller._timeoutId = timeoutId;
-      
-      // Debounce frequently called endpoints
-      if (config.debounce && pendingRequests.has(requestId)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Debouncing request: ${requestId}`);
-        }
-        controller.abort('Request debounced');
-        return Promise.reject(new axios.Cancel('Request debounced'));
-      }
-      
-      if (config.debounce) {
-        pendingRequests.set(requestId, Date.now());
-        setTimeout(() => {
-          pendingRequests.delete(requestId);
-        }, config.debounce);
-      }
-      
-      // Get the token from localStorage
-      const accessToken = localStorage.getItem('accessToken');
-      
-      if (accessToken) {
-        // Add Authorization header with the token
-        config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-
-      // For non-GET requests, ensure we have a CSRF token
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(config.method?.toUpperCase())) {
-        // Try to ensure we have a CSRF token before continuing
-        const token = await ensureCSRFToken();
-        if (token) {
-          // Add token in both formats to maximize compatibility
-          config.headers['X-CSRF-Token'] = token;
-          config.headers['X-XSRF-TOKEN'] = token;
-          
-          // For POST requests, add the token to the body as well for maximum compatibility
-          if (config.method === 'post' && config.data && typeof config.data === 'object') {
-            config.data._csrf = token;
-          }
-        } else {
-          console.warn('Could not obtain CSRF token for request');
-        }
-      }
-
-      // Handle caching for GET requests
-      if (config.method === 'get' && config.cache !== false) {
-        const cacheKey = `${config.url}${JSON.stringify(config.params || {})}`;
-        const cachedResponse = cache.get(cacheKey);
-        
-        if (cachedResponse && Date.now() - cachedResponse.timestamp < (config.cacheDuration || CACHE_DURATION)) {
-          // Return cached response as a promise
-          config.adapter = () => {
-            // Clean up the controller and timeout for cached responses
-            clearTimeout(controller._timeoutId);
-            pendingControllers.delete(requestId);
-            
-            return Promise.resolve({
-              data: cachedResponse.data,
-              status: 200,
-              statusText: 'OK',
-              headers: cachedResponse.headers,
-              config: config,
-              cached: true
-            });
-          };
-        }
-      }
-      
-      return config;
-    } catch (err) {
-      console.error('Request setup error:', err.message);
-      return Promise.reject(err);
+  config => {
+    const auth = JSON.parse(localStorage.getItem('auth')) || {};
+    if (!config.headers['Authorization'] && auth.accessToken) {
+      config.headers['Authorization'] = `Bearer ${auth.accessToken}`;
     }
+    return config;
   },
-  error => {
-    console.error('Request interceptor error:', error);
-    // Debug auth status on request errors
-    console.log('Auth status on request error:');
-    debugAuthStatus();
+  error => Promise.reject(error)
+);
+
+axiosPrivate.interceptors.response.use(
+  response => response,
+  async error => {
+    const prevRequest = error?.config;
+    if (error?.response?.status === 403 && !prevRequest?.sent) {
+      prevRequest.sent = true;
+      try {
+        const response = await axiosPublic.get('/auth/refresh');
+        const newAccessToken = response.data.accessToken;
+        
+        const auth = JSON.parse(localStorage.getItem('auth')) || {};
+        auth.accessToken = newAccessToken;
+        localStorage.setItem('auth', JSON.stringify(auth));
+        
+        prevRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+        return axiosPrivate(prevRequest);
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    }
     return Promise.reject(error);
   }
 );

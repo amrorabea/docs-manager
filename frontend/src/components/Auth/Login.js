@@ -36,39 +36,24 @@ const Login = () => {
     setError('');
     setLoading(true);
 
-    // Simple validation
-    if (!formData.email || !formData.password) {
-      setError('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
-      setLoading(false);
-      return;
-    }
-
     try {
-      console.log('Attempting to login with:', formData.email);
-      await login(formData);
-      // Navigate to the page they were trying to access, or home
-      navigate(from, { replace: true });
+      // Validate inputs
+      if (!formData.email || !formData.password) {
+        throw new Error('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
+      }
+
+      // Call auth context login
+      const success = await login({
+        email: formData.email.trim(),
+        password: formData.password
+      });
+
+      if (success) {
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       console.error('Login error:', err);
-      
-      // Set error message based on error response
-      let errorMessage = 'فشل تسجيل الدخول. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
-      
-      if (err.response) {
-        // If we have a server response with a message
-        if (err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.status === 401) {
-          errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-        } else if (err.response.status === 403) {
-          errorMessage = 'حسابك غير مفعل. الرجاء التواصل مع الإدارة.';
-        }
-      } else if (err.request) {
-        // If no response was received
-        errorMessage = 'لا يمكن الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.';
-      }
-      
-      setError(errorMessage);
+      setError(err.response?.data?.message || err.message || 'فشل تسجيل الدخول');
     } finally {
       setLoading(false);
     }

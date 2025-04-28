@@ -109,28 +109,20 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-  
+
       const response = await apiLogin(credentials);
-  
+      
       if (response?.accessToken) {
-        // Create auth state with user info from decoded token
-        const authState = {
+        setAuth({
           accessToken: response.accessToken,
-          user: response.user,
-        };
-  
-        setAuth(authState);
-        
-        // Set the flag to indicate the user has explicitly logged in
-        localStorage.setItem('hasLoggedIn', 'true');
-        
-        return response;
-      } else {
-        throw new Error('Login failed: No access token received');
+          user: response.user
+        });
+        return true;
       }
+      
+      throw new Error('No token received');
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      setError(err.message);
       throw err;
     } finally {
       setLoading(false);
