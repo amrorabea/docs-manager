@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'http://policieslog.com'
+  ? 'https://policieslog.com'
   : 'http://localhost:5000';
 
 // Simple in-memory cache with size limit
