@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://policieslog.com/api'
+  ? 'https://209.74.80.185:5000'  // Changed to HTTPS
   : 'http://localhost:5000';
 
 // Simple in-memory cache with size limit
@@ -137,117 +137,69 @@ const addToCache = (key, value) => {
 
 // Add request interceptor to handle cancellation and timeouts
 axiosPrivate.interceptors.request.use(
-  async config => {
-    try {
-      // Generate a unique request ID based on URL and method
-      const requestId = `${config.method}-${config.url}`;
-      
-      // Don't cancel GET requests for resources that might change frequently
-      // This prevents excessive cancellations during navigation
-      const shouldCancelDuplicates = config.cancelDuplicates !== false && 
-        !(config.method === 'get' && config.url.includes('/api/notifications'));
-      
-      // Cancel any previous identical requests to avoid race conditions
-      if (shouldCancelDuplicates) {
-        cancelPreviousRequests(requestId);
-      }
-      
-      // Create an AbortController for this request
-      const controller = new AbortController();
-      config.signal = controller.signal;
-      pendingControllers.set(requestId, controller);
-      
-      // Set up automatic cancellation after timeout
-      const timeoutId = setTimeout(() => {
-        if (pendingControllers.has(requestId)) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn(`Request timed out: ${requestId}`);
-          }
-          controller.abort();
-          pendingControllers.delete(requestId);
-        }
-      }, config.timeout || REQUEST_TIMEOUT);
-      
-      // Store the timeout ID for cleanup
-      controller._timeoutId = timeoutId;
-      
-      // Debounce frequently called endpoints
-      if (config.debounce && pendingRequests.has(requestId)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Debouncing request: ${requestId}`);
-        }
-        controller.abort('Request debounced');
-        return Promise.reject(new axios.Cancel('Request debounced'));
-      }
-      
-      if (config.debounce) {
-        pendingRequests.set(requestId, Date.now());
-        setTimeout(() => {
-          pendingRequests.delete(requestId);
-        }, config.debounce);
-      }
-      
-      // Get the token from localStorage
-      const accessToken = localStorage.getItem('accessToken');
-      
-      if (accessToken) {
-        // Add Authorization header with the token
-        config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-
-      // For non-GET requests, ensure we have a CSRF token
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(config.method?.toUpperCase())) {
-        // Try to ensure we have a CSRF token before continuing
-        const token = await ensureCSRFToken();
-        if (token) {
-          // Add token in both formats to maximize compatibility
-          config.headers['X-CSRF-Token'] = token;
-          config.headers['X-XSRF-TOKEN'] = token;
-          
-          // For POST requests, add the token to the body as well for maximum compatibility
-          if (config.method === 'post' && config.data && typeof config.data === 'object') {
-            config.data._csrf = token;
-          }
-        } else {
-          console.warn('Could not obtain CSRF token for request');
-        }
-      }
-
-      // Handle caching for GET requests
-      if (config.method === 'get' && config.cache !== false) {
-        const cacheKey = `${config.url}${JSON.stringify(config.params || {})}`;
-        const cachedResponse = cache.get(cacheKey);
-        
-        if (cachedResponse && Date.now() - cachedResponse.timestamp < (config.cacheDuration || CACHE_DURATION)) {
-          // Return cached response as a promise
-          config.adapter = () => {
-            // Clean up the controller and timeout for cached responses
-            clearTimeout(controller._timeoutId);
-            pendingControllers.delete(requestId);
-            
-            return Promise.resolve({
-              data: cachedResponse.data,
-              status: 200,
-              statusText: 'OK',
-              headers: cachedResponse.headers,
-              config: config,
-              cached: true
-            });
-          };
-        }
-      }
-      
-      return config;
-    } catch (err) {
-      console.error('Request setup error:', err.message);
-      return Promise.reject(err);
+  config => {
+    const auth = JSON.parse(localStorage.getItem('auth')) || {};
+    if (!config.headers['Authorization'] && auth.accessToken) {
+      config.headers['Authorization'] = `Bearer ${auth.accessToken}`;
     }
+    return config;
   },
-  error => {
-    console.error('Request interceptor error:', error);
-    // Debug auth status on request errors
-    console.log('Auth status on request error:');
+  error => Promise.reject(error)
+);
+
+// Debug helper for auth status
+export const debugAuthStatus = async () => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const csrfToken = localStorage.getItem('csrfToken');
+    return {
+      hasToken: !!token,
+      tokenExpiry: token ? JSON.parse(atob(token.split('.')[1])).exp : null,
+      hasCsrfToken: !!csrfToken,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Auth debug error:', error);
+    return { error: error.message };
+  }
+};
+
+// Handle authentication failures
+const handleAuthFailure = () => {
+  if (process.env.NODE_ENV !== 'production') {
     debugAuthStatus();
+  }
+  
+  clearAuthData();
+  
+  if (!isRedirecting && !window.location.pathname.includes('/login')) {
+    isRedirecting = true;
+    window.location.href = '/login';
+    setTimeout(() => {
+      isRedirecting = false;
+    }, 500);
+  }
+};
+
+// Modify the error interceptor
+axiosPrivate.interceptors.response.use(
+  response => response,
+  async error => {
+    // Clean up on error
+    if (error.config) {
+      const requestId = `${error.config.method}-${error.config.url}`;
+      if (pendingControllers.has(requestId)) {
+        const controller = pendingControllers.get(requestId);
+        clearTimeout(controller._timeoutId);
+        pendingControllers.delete(requestId);
+      }
+    }
+
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      handleAuthFailure();
+    }
+
     return Promise.reject(error);
   }
 );
@@ -429,26 +381,6 @@ export const clearCache = (urlPattern) => {
   });
 };
 
-// Handle authentication failures
-const handleAuthFailure = () => {
-  console.log('Authentication failure detected, clearing data and redirecting');
-  clearAuthData();
-  
-  if (!isRedirecting && !window.location.pathname.includes('/login')) {
-    isRedirecting = true;
-    
-    // Show a user-friendly message
-    alert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.');
-    
-    setTimeout(() => {
-      window.location.href = '/login';
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 500);
-    }, 0);
-  }
-};
-
 // Check if we have a valid token
 export const hasValidToken = () => {
   return !!localStorage.getItem('accessToken');
@@ -519,298 +451,50 @@ export const ensureCSRFToken = async () => {
 export default axiosPublic;
 
 // Special login function that ensures CSRF token handling
-export const loginRequest = async (email, password) => {
+export const loginRequest = async (credentials) => {
+    try {
+        const response = await axiosPublic.post('/auth/handleLogin', credentials, {
+            withCredentials: true,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.data?.accessToken) {
+            localStorage.setItem('accessToken', response.data.accessToken);
+            return response.data;
+        }
+        
+        throw new Error('No access token received');
+    } catch (error) {
+        if (error.message === 'Network Error') {
+            // Check if it's a mixed content error
+            if (window.location.protocol === 'https:' && BASE_URL.startsWith('http:')) {
+                throw new Error('Cannot make insecure request from secure page. Please contact administrator.');
+            }
+            throw new Error('Unable to connect to the server. Please check your connection.');
+        }
+        if (error.response?.status === 401) {
+            throw new Error('Invalid credentials');
+        }
+        throw error;
+    }
+};
+
+// Add timeout wrapper for long-running requests
+export const withExtendedTimeout = async (apiCall) => {
   try {
-    // Always try to get a fresh token before login
-    await axiosPublic.get('/api/security/csrf-token');
-    
-    // Get the token after the request
-    const csrfToken = getCSRFToken();
-    console.log('CSRF token for login:', csrfToken ? 'Found' : 'Not found');
-    
-    // Use only headers that are allowed by the backend CORS configuration
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    // Include the CSRF token in the request body only, not in headers
-    // This avoids CORS preflight issues with custom headers
-    const data = { 
-      email, 
-      password,
-      _csrf: csrfToken // Include token in body only
-    };
-    
-    console.log('Sending login request with CSRF token in body');
-    
-    // Create a custom axios instance for this specific request
-    const loginAxios = axios.create({
-      baseURL: BASE_URL,
-      headers: { 'Content-Type': 'application/json' },
-      withCredentials: true,
-      timeout: REQUEST_TIMEOUT
-    });
-    
-    const response = await loginAxios.post('/auth/handleLogin', data, { headers });
-    return response.data;
+    const response = await Promise.race([
+      apiCall,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      )
+    ]);
+    return response;
   } catch (error) {
-    // Provide more detailed error for debugging
-    if (error.message === 'Network Error') {
-      console.error('Login request failed (CORS issue):', error);
-      throw new Error('Unable to connect to the server. This may be a CORS issue.');
-    } else {
-      console.error('Login request failed:', error);
-      throw error;
+    if (error.message === 'Request timeout') {
+      throw new Error('Request took too long to complete');
     }
+    throw error;
   }
-};
-
-// API request function
-const apiRequest = async (url, method = 'GET', data = null) => {
-  try {
-    // First ensure we have a CSRF token for non-GET requests
-    let csrfToken = null;
-    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      // For login specifically, always get a fresh token
-      if (url === '/auth/handleLogin') {
-        await axiosPublic.get('/api/security/csrf-token');
-      }
-      csrfToken = await ensureCSRFToken();
-    }
-    
-    // Use only standard headers to avoid CORS preflight issues
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    // In development, log the token being used
-    if (csrfToken && process.env.NODE_ENV !== 'production') {
-      console.log('Using CSRF token for request:', csrfToken.substring(0, 6) + '...');
-    } else if (method !== 'GET') {
-      console.warn('No CSRF token available for request to ' + url);
-    }
-
-    // Add Authorization header with the token if available
-    const accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const options = {
-      method,
-      headers,
-      credentials: 'include', // Important for cookies
-    };
-
-    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      const dataWithToken = { ...data };
-      
-      // For POST requests, add the token as part of the body
-      if (csrfToken) {
-        dataWithToken._csrf = csrfToken;
-      }
-      
-      options.body = JSON.stringify(dataWithToken);
-    }
-
-    // Create AbortController for fetch
-    const controller = new AbortController();
-    options.signal = controller.signal;
-    
-    // Set a timeout for the request
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, REQUEST_TIMEOUT);
-
-    try {
-      const response = await fetch(`${BASE_URL}${url}`, options);
-      
-      // Clear the timeout
-      clearTimeout(timeoutId);
-      
-      // If the response indicates a CSRF error, log it clearly
-      if (response.status === 403) {
-        const responseData = await response.json();
-        if (responseData.error && responseData.error.includes('CSRF')) {
-          console.error('CSRF validation failed:', responseData.error);
-          console.debug('CSRF token used:', csrfToken);
-          // Refresh CSRF token for future requests
-          await refreshCSRFToken();
-        }
-        throw new Error(responseData.error || 'Forbidden');
-      }
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-
-      // Try to parse JSON response safely
-      try {
-        return await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse response as JSON:', parseError);
-        return { success: true, message: 'Operation completed successfully' };
-      }
-    } catch (fetchError) {
-      // Clean up timeout on error
-      clearTimeout(timeoutId);
-      
-      // Handle cancellation
-      if (fetchError.name === 'AbortError') {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Request to ${url} was aborted/timed out`);
-        }
-        throw new Error('Request was canceled or timed out');
-      }
-      
-      throw fetchError;
-    }
-  } catch (error) {
-    // Provide more detailed error for debugging
-    if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
-      console.error('API request network error:', error);
-      throw new Error('Unable to connect to the server. Please check your internet connection.');
-    } else if (error.message.includes('canceled') || error.message.includes('aborted')) {
-      // Don't log cancellation errors in production
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('API request canceled:', error.message);
-      }
-      // Return a standardized cancel error
-      throw {
-        isCanceled: true,
-        message: 'Request was canceled',
-        originalError: error
-      };
-    } else {
-      console.error('API request error:', error);
-      throw error;
-    }
-  }
-};
-
-// Add request interceptors to axiosPublic as well for login/register endpoints
-axiosPublic.interceptors.request.use(
-  async (config) => {
-    try {
-      // Special handling for auth endpoints
-      if (config.url?.includes('/auth/')) {
-        const csrfToken = await ensureCSRFToken();
-        
-        // Add CSRF token to the body for POST requests instead of headers
-        // to avoid CORS preflight issues
-        if (csrfToken && config.method === 'post' && config.data) {
-          // If data is string (already stringified), parse it first
-          const data = typeof config.data === 'string' 
-            ? JSON.parse(config.data) 
-            : config.data;
-            
-          // Add CSRF token to the body
-          config.data = JSON.stringify({
-            ...data,
-            _csrf: csrfToken
-          });
-        }
-        
-        // Only set standard headers that don't trigger CORS preflight
-        config.headers['Content-Type'] = 'application/json';
-      }
-      
-      // Add Authorization header with the token if available
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-      
-      return config;
-    } catch (err) {
-      console.error('Request setup error:', err.message);
-      return Promise.reject(err);
-    }
-  },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add request interceptors to axiosPrivate
-axiosPrivate.interceptors.request.use(
-  async (config) => {
-    try {
-      // Do not set Content-Type for FormData objects - the browser handles this automatically
-      const isFormData = config.data instanceof FormData;
-      
-      if (isFormData) {
-        // Delete Content-Type header if it exists to let the browser set it with correct boundary
-        delete config.headers['Content-Type'];
-        console.log('FormData detected: Content-Type header removed to allow browser to set it correctly');
-      } else if (config.method !== 'get') {
-        // For non-GET requests that aren't FormData, ensure CSRF token is set
-        const csrfToken = await ensureCSRFToken();
-        
-        // For POST/PUT/PATCH, add CSRF to body instead of headers when possible
-        // to avoid CORS preflight issues
-        if (csrfToken && ['post', 'put', 'patch'].includes(config.method) && config.data) {
-          // If data is string (already stringified), parse it first
-          const data = typeof config.data === 'string' 
-            ? JSON.parse(config.data) 
-            : config.data;
-            
-          // Add CSRF token to the body
-          config.data = JSON.stringify({
-            ...data,
-            _csrf: csrfToken
-          });
-        }
-        
-        // Only use the Authorization header which usually doesn't trigger CORS preflight
-      }
-      
-      // Add Authorization header with the token if available
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-      
-      return config;
-    } catch (err) {
-      console.error('Request setup error:', err.message);
-      return Promise.reject(err);
-    }
-  },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Ensure apiRequest is exported
-export { apiRequest };
-
-// Add this function at the end of the file
-export const debugAuthStatus = () => {
-  try {
-    const authData = {
-      accessToken: !!localStorage.getItem('accessToken'),
-      refreshToken: document.cookie.includes('refresh_token'),
-      csrfToken: !!getCSRFToken(),
-      user: localStorage.getItem('user'),
-      isAdmin: localStorage.getItem('isAdmin') === 'true',
-      cookies: document.cookie
-    };
-    
-    console.log('Auth Debug Info:', authData);
-    return authData;
-  } catch (err) {
-    console.error('Error debugging auth status:', err);
-    return { error: err.message };
-  }
-};
-
-// Add a helper function to increase timeout for specific API calls
-export const withExtendedTimeout = (config = {}) => {
-  return {
-    ...config,
-    timeout: 60000 // 60 seconds for operations that might take longer
-  };
 };

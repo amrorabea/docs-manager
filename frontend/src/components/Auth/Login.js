@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import { loginRequest } from '../../services/api';
 import './Auth.css';
 
 const Login = () => {
-  const { login, error: authError, loading: authLoading } = useAuth();
+  const { auth, login } = useAuth();  // Destructure auth from useAuth
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -36,39 +37,34 @@ const Login = () => {
     setError('');
     setLoading(true);
 
-    // Simple validation
-    if (!formData.email || !formData.password) {
-      setError('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
-      setLoading(false);
-      return;
-    }
-
     try {
-      console.log('Attempting to login with:', formData.email);
-      await login(formData);
-      // Navigate to the page they were trying to access, or home
-      navigate(from, { replace: true });
+      if (!formData.email || !formData.password) {
+        throw new Error('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
+      }
+
+      // Use the loginRequest function to get token
+      const loginData = await loginRequest({
+        email: formData.email.trim(),
+        password: formData.password
+      });
+
+      // Use the login function from useAuth
+      if (loginData?.accessToken) {
+        await login(loginData);  // Changed from auth.login to login
+        navigate(from, { replace: true });
+      } else {
+        throw new Error('فشل تسجيل الدخول');
+      }
     } catch (err) {
       console.error('Login error:', err);
-      
-      // Set error message based on error response
-      let errorMessage = 'فشل تسجيل الدخول. يرجى التحقق من البريد الإلكتروني وكلمة المرور.';
-      
-      if (err.response) {
-        // If we have a server response with a message
-        if (err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.status === 401) {
-          errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-        } else if (err.response.status === 403) {
-          errorMessage = 'حسابك غير مفعل. الرجاء التواصل مع الإدارة.';
-        }
-      } else if (err.request) {
-        // If no response was received
-        errorMessage = 'لا يمكن الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.';
+      // Handle specific error types
+      if (err.response?.status === 401) {
+        setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      } else if (err.response?.status === 429) {
+        setError('محاولات كثيرة للدخول. الرجاء المحاولة لاحقاً');
+      } else {
+        setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
       }
-      
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -80,7 +76,6 @@ const Login = () => {
         <h2 className="auth-title">تسجيل الدخول</h2>
         
         {error && <div className="auth-error">{error}</div>}
-        {authError && !error && <div className="auth-error">{authError}</div>}
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -94,7 +89,7 @@ const Login = () => {
               required
               className="form-control"
               placeholder="أدخل بريدك الإلكتروني"
-              disabled={loading || authLoading}
+              disabled={loading}
             />
           </div>
           
@@ -109,16 +104,16 @@ const Login = () => {
               required
               className="form-control"
               placeholder="أدخل كلمة المرور"
-              disabled={loading || authLoading}
+              disabled={loading}
             />
           </div>
           
           <button 
             type="submit" 
             className="auth-button" 
-            disabled={loading || authLoading}
+            disabled={loading}
           >
-            {loading || authLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+            {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </button>
         </form>
       </div>

@@ -1,6 +1,5 @@
 import axios from './api';
 import { jwtDecode } from 'jwt-decode';
-import { loginRequest } from './api';
 
 // Optimized utility function to clear all authentication-related data
 export const clearAuthData = () => {
@@ -117,44 +116,35 @@ const checkAndClearOnLoad = () => {
 // Immediately run the check function
 checkAndClearOnLoad();
 
-export const login = async (credentials) => {
+const loginRequest = async (credentials) => {
   try {
-    // Use the specialized login function for better CSRF token handling
-    const data = await loginRequest(credentials.email, credentials.password);
+    const response = await axios.post('/auth/login', credentials, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
 
-    if (data && data.accessToken) {
-      const accessToken = data.accessToken;
-      
-      // Use the user object directly from the API response
-      // instead of decoding the JWT, which might not include all user data
-      const user = data.user;
-
-      // Store token and user info in localStorage
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      // Set the flag to indicate explicit login
-      localStorage.setItem('hasLoggedIn', 'true');
-      
-      // Set last activity timestamp
-      updateLastActivity();
-      
-      // Setup idle detection after login
-      setupIdleDetection();
-
-      return {
-        accessToken,
-        user
-      };
-    } else {
-      console.warn('No access token received in login response');
-      return {};
+    if (!response.data?.accessToken) {
+      throw new Error('No access token received');
     }
+
+    return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || error.message || 'Login failed';
-    console.error('Login error:', errorMessage);
-    throw new Error(errorMessage);
+    if (error.response?.status === 401) {
+      throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    }
+    throw error;
   }
+};
+
+export const login = async (credentials) => {
+  const data = await loginRequest(credentials);
+  if (data.accessToken) {
+    localStorage.setItem('hasLoggedIn', 'true');
+    return data;
+  }
+  throw new Error('فشل تسجيل الدخول');
 };
 
 export const register = async (userData) => {

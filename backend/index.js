@@ -16,6 +16,8 @@ const cookieParser = require('cookie-parser');
 const logger = require('./utils/logger');
 const { errorMiddleware, setupGlobalErrorHandlers } = require('./utils/errorHandler');
 const { cacheMiddleware } = require('./utils/cache');
+const https = require('https');
+const fs = require('fs');
 
 // Initialize error handlers early
 setupGlobalErrorHandlers();
@@ -94,7 +96,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https://policieslog.com"],
-      connectSrc: ["'self'", "https://policieslog.com"],
+      connectSrc: ["'self'", "https://policieslog.com", "http://209.74.80.185:5000"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
@@ -108,8 +110,10 @@ app.use(helmet({
 app.use(checkSuspiciousHeaders);
 app.use(sanitizeReferrer);
 
-// Generate CSRF tokens for all requests
+// Comment out CSRF token generation
+/*
 app.use(generateToken);
+*/
 
 app.use(compression());
 
@@ -120,9 +124,10 @@ app.use(createRateLimiter());
 app.use(bruteForceProtection.middleware());
 
 // CORS configuration with enhanced security
+/*
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? 'https://policieslog.com'  // Single origin instead of array
+    ? ['https://policieslog.com', 'http://209.74.80.185:5000']  // Add your IP
     : ['http://localhost:3000', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -135,6 +140,15 @@ app.use(cors({
   exposedHeaders: ['X-CSRF-Token'],
   maxAge: 24 * 60 * 60 // 24 hours
 }));
+*/
+
+// Instead, add these basic headers for all responses
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -217,10 +231,12 @@ app.get('/health', cacheMiddleware(60), (req, res) => {
   });
 });
 
-// JWT verification middleware for protected routes
+// Comment out JWT verification for protected routes temporarily
+/*
 app.use(verifyJWT.verifyJWT);
+*/
 
-// Protected routes - use caching for read operations
+// Update your routes section to bypass verification
 app.use('/api/policies', policyAPI);
 app.use('/api/departments', departmentAPI);
 app.use('/api/users', userAPI);
@@ -268,12 +284,14 @@ const connectDB = async () => {
   }
 };
 
-// Start server only after successful database connection
+let server; // Define server variable at the top level
+
+// Modify your startServer function
 const startServer = async () => {
   const connected = await connectDB();
   
   if (connected) {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     
     // Initialize scheduled tasks
     const { initScheduledTasks } = require('./scheduledTasks');
@@ -290,15 +308,17 @@ const gracefulShutdown = async () => {
     logger.info('Received shutdown signal, starting graceful shutdown...');
     
     // Close server first to stop accepting new requests
-    server.close(() => {
-      logger.info('Express server closed');
-    });
+    if (server) {
+      await new Promise((resolve) => {
+        server.close(resolve);
+        logger.info('Express server closed');
+      });
+    }
 
     // Close MongoDB connection
     await mongoose.connection.close();
     logger.info('MongoDB connection closed');
 
-    // Exit process
     process.exit(0);
   } catch (err) {
     logger.error('Error during shutdown:', err);
