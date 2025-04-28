@@ -46,6 +46,12 @@ app.set('trust proxy', 1);
 // Generate random session secret on startup
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
 
+// --- SESSION SECRET CHECK FOR PRODUCTION ---
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET environment variable must be set in production!');
+  process.exit(1);
+}
+
 // Cookie parser middleware - needed for CSRF
 app.use(cookieParser());
 
