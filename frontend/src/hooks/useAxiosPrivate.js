@@ -17,12 +17,12 @@ const useAxiosPrivate = () => {
           console.log(`Making ${config.method.toUpperCase()} request to: ${config.url}`);
         }
         
-        // If Authorization header isn't already set, add it from auth context
-        if (!config.headers['Authorization'] && auth?.accessToken) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('Adding Authorization header with token');
+        // Always set Authorization header from context or localStorage
+        if (!config.headers['Authorization']) {
+          const token = auth?.accessToken || localStorage.getItem('accessToken');
+          if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
           }
-          config.headers['Authorization'] = `Bearer ${auth.accessToken}`;
         }
         
         return config;

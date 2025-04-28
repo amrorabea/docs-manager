@@ -4,19 +4,15 @@ import axios from 'axios';
 // Add a direct fetch function for policies that bypasses interceptors
 const directFetch = async (url) => {
   try {
-    // Get the token directly
+    // Always get the token from localStorage
     const token = localStorage.getItem('accessToken');
-    
-    // Create a new axios instance specifically for this request
-    // to avoid any cancellation issues from interceptors
     const directAxios = axios.create({
       baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
       timeout: 60000, // Long timeout
       withCredentials: true
     });
-    
-    // Add the auth token directly
-    const headers = { 'Authorization': `Bearer ${token}` };
+    // Always add the auth token if available
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     console.log(`[Direct fetch] Requesting: ${url}`);
     const response = await directAxios.get(url, { headers });

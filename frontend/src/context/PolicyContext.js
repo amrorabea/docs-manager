@@ -25,7 +25,7 @@ export const PolicyProvider = ({ children }) => {
   const { auth, logout } = useContext(AuthContext);
 
   const fetchPolicies = async () => {
-    if (!auth?.accessToken) {
+    if (!auth?.accessToken && !localStorage.getItem('accessToken')) {
       console.log('No access token available, skipping policy fetch');
       setLoading(false);
       return;
@@ -85,7 +85,7 @@ export const PolicyProvider = ({ children }) => {
 
   // New function for searching policies
   const handleSearch = async (query, departmentId = null) => {
-    if (!auth?.accessToken) {
+    if (!auth?.accessToken && !localStorage.getItem('accessToken')) {
       console.log('No access token available, skipping policy search');
       return;
     }
@@ -141,7 +141,7 @@ export const PolicyProvider = ({ children }) => {
   };
 
   const fetchDepartments = async () => {
-    if (!auth?.accessToken) {
+    if (!auth?.accessToken && !localStorage.getItem('accessToken')) {
       console.log('No access token available, skipping departments fetch');
       return;
     }

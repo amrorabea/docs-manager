@@ -49,6 +49,17 @@ export const AuthProvider = ({ children }) => {
     }
   }, [auth]);
 
+  // On mount, always initialize auth from localStorage if not set
+  useEffect(() => {
+    if (!auth?.accessToken) {
+      const storedAuth = localStorage.getItem('accessToken');
+      const storedUser = localStorage.getItem('user');
+      if (storedAuth && storedUser) {
+        setAuth({ accessToken: storedAuth, user: JSON.parse(storedUser) });
+      }
+    }
+  }, []);
+
   // Initial session verification - prevent auto-refresh for users who haven't explicitly logged in
   useEffect(() => {
     const verifyRefreshToken = async () => {
