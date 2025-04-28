@@ -121,13 +121,14 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "data:", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000"],
+      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000", "https://res.cloudinary.com"],
       connectSrc: [
         "'self'",
         "https://policieslog.com",
         "http://209.74.80.185:5000",
         "https://fonts.googleapis.com",
-        "https://fonts.gstatic.com"
+        "https://fonts.gstatic.com",
+        "https://res.cloudinary.com"
       ],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
