@@ -16,6 +16,8 @@ const cookieParser = require('cookie-parser');
 const logger = require('./utils/logger');
 const { errorMiddleware, setupGlobalErrorHandlers } = require('./utils/errorHandler');
 const { cacheMiddleware } = require('./utils/cache');
+const https = require('https');
+const fs = require('fs');
 
 // Initialize error handlers early
 setupGlobalErrorHandlers();

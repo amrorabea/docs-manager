@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'http://209.74.80.185:5000'  // Changed from https to http
+  ? 'https://209.74.80.185:5000'  // Changed to HTTPS
   : 'http://localhost:5000';
 
 // Simple in-memory cache with size limit
@@ -453,7 +453,7 @@ export default axiosPublic;
 // Special login function that ensures CSRF token handling
 export const loginRequest = async (credentials) => {
     try {
-        const response = await axiosPublic.post('/auth/login', credentials, {  // Changed from handleLogin to login
+        const response = await axiosPublic.post('/auth/login', credentials, {
             withCredentials: true,
             headers: {
                 'Content-Type': 'application/json'
@@ -467,11 +467,15 @@ export const loginRequest = async (credentials) => {
         
         throw new Error('No access token received');
     } catch (error) {
+        if (error.message === 'Network Error') {
+            // Check if it's a mixed content error
+            if (window.location.protocol === 'https:' && BASE_URL.startsWith('http:')) {
+                throw new Error('Cannot make insecure request from secure page. Please contact administrator.');
+            }
+            throw new Error('Unable to connect to the server. Please check your connection.');
+        }
         if (error.response?.status === 401) {
             throw new Error('Invalid credentials');
-        }
-        if (error.message === 'Network Error') {
-            throw new Error('Unable to connect to the server');
         }
         throw error;
     }
