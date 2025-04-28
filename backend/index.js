@@ -120,6 +120,7 @@ app.use(createRateLimiter());
 app.use(bruteForceProtection.middleware());
 
 // CORS configuration with enhanced security
+/*
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://policieslog.com', 'http://209.74.80.185:5000']  // Add your IP
@@ -135,6 +136,15 @@ app.use(cors({
   exposedHeaders: ['X-CSRF-Token'],
   maxAge: 24 * 60 * 60 // 24 hours
 }));
+*/
+
+// Instead, add these basic headers for all responses
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
