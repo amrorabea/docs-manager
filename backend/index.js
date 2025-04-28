@@ -108,8 +108,10 @@ app.use(helmet({
 app.use(checkSuspiciousHeaders);
 app.use(sanitizeReferrer);
 
-// Generate CSRF tokens for all requests
+// Comment out CSRF token generation
+/*
 app.use(generateToken);
+*/
 
 app.use(compression());
 
@@ -227,10 +229,12 @@ app.get('/health', cacheMiddleware(60), (req, res) => {
   });
 });
 
-// JWT verification middleware for protected routes
+// Comment out JWT verification for protected routes temporarily
+/*
 app.use(verifyJWT.verifyJWT);
+*/
 
-// Protected routes - use caching for read operations
+// Update your routes section to bypass verification
 app.use('/api/policies', policyAPI);
 app.use('/api/departments', departmentAPI);
 app.use('/api/users', userAPI);
