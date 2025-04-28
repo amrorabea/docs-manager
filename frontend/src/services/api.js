@@ -453,7 +453,7 @@ export default axiosPublic;
 // Special login function that ensures CSRF token handling
 export const loginRequest = async (credentials) => {
     try {
-        const response = await axiosPublic.post('/auth/handleLogin', credentials, {
+        const response = await axiosPublic.post('/auth/login', credentials, {  // Changed from handleLogin to login
             withCredentials: true,
             headers: {
                 'Content-Type': 'application/json'
@@ -469,6 +469,9 @@ export const loginRequest = async (credentials) => {
     } catch (error) {
         if (error.response?.status === 401) {
             throw new Error('Invalid credentials');
+        }
+        if (error.message === 'Network Error') {
+            throw new Error('Unable to connect to the server');
         }
         throw error;
     }
