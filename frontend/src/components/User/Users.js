@@ -25,8 +25,8 @@ const Users = () => {
 
   // Use useCallback to prevent unnecessary re-renders
   const fetchUsers = useCallback(async () => {
-    // Don't attempt to fetch if not admin
-    if (!isAdmin) return;
+    // Don't attempt to fetch if not admin or already loading
+    if (!isAdmin || loading) return;
     
     try {
       setLoading(true);
@@ -90,7 +90,7 @@ const Users = () => {
       setError(errorMessage);
       setLoading(false);
     }
-  }, [axiosPrivate, isAdmin]);
+  }, [axiosPrivate, isAdmin, loading]);
 
   // Extra security check to ensure admin rights on the page load
   useEffect(() => {
@@ -98,14 +98,15 @@ const Users = () => {
       setError('Unauthorized: Admin access required');
       return; // Don't fetch users if not admin
     }
-    
-    fetchUsers();
-    
+    // Only fetch if not already loading
+    if (!loading) {
+      fetchUsers();
+    }
     // Cleanup function for canceling requests
     return () => {
       // Any cleanup if needed
     };
-  }, [isAdmin, fetchUsers]);
+  }, [isAdmin, fetchUsers, loading]);
 
   const handleDeleteUser = async (userId) => {
     // Prevent deleting if already in progress

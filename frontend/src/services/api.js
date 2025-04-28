@@ -86,24 +86,23 @@ const clearAuthData = () => {
 
 // Helper to get CSRF token from cookie
 const getCSRFToken = () => {
-  // Improved cookie parsing
   try {
     // Try from cookie first
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'XSRF-TOKEN') {
+        // Always store in localStorage for reliability
+        localStorage.setItem('csrfToken', decodeURIComponent(value));
         return decodeURIComponent(value);
       }
     }
-    
     // Try from localStorage fallback if we set it there
     const storedToken = localStorage.getItem('csrfToken');
     if (storedToken) {
       console.log('Using CSRF token from localStorage');
       return storedToken;
     }
-    
     // If no token found, log a warning
     console.warn('CSRF token not found in cookies or localStorage');
     return null;
@@ -467,50 +466,51 @@ export const refreshCSRFToken = async () => {
 
 // Ensure CSRF token is available before auth requests
 export const ensureCSRFToken = async () => {
-  const csrfToken = getCSRFToken();
+  let csrfToken = getCSRFToken();
   if (!csrfToken) {
     console.log('No CSRF token found, fetching a new one');
     try {
-      // Try multiple endpoint variations to ensure we get a token
       const endpoints = [
         '/api/security/csrf-token',
         '/api/security/csrf',
-        '/' // If the server generates CSRF tokens for all requests
+        '/'
       ];
-      
       for (const endpoint of endpoints) {
         try {
           console.log(`Trying to fetch CSRF token from ${endpoint}`);
           const response = await axiosPublic.get(endpoint);
           console.log(`CSRF token response from ${endpoint}:`, response.status);
-          
           // Check if we got a token after this request
-          const token = getCSRFToken();
-          if (token) {
-            console.log('Successfully obtained CSRF token');
-            localStorage.setItem('csrfToken', token);
-            return token;
+          csrfToken = getCSRFToken();
+          if (csrfToken) {
+            // Always set in both cookie and localStorage
+            document.cookie = `XSRF-TOKEN=${csrfToken}; path=/; max-age=${24 * 60 * 60}`;
+            localStorage.setItem('csrfToken', csrfToken);
+            return csrfToken;
           }
-          
           // If there's a token in headers, use that
-          const headerToken = response.headers['x-xsrf-token'];
+          const headerToken = response.headers['x-xsrf-token'] || response.headers['x-csrf-token'];
           if (headerToken) {
             console.log('Using CSRF token from response headers');
+            document.cookie = `XSRF-TOKEN=${headerToken}; path=/; max-age=${24 * 60 * 60}`;
             localStorage.setItem('csrfToken', headerToken);
             return headerToken;
           }
         } catch (endpointError) {
           console.warn(`Failed to fetch CSRF token from ${endpoint}:`, endpointError);
-          // Continue to next endpoint
         }
       }
-      
       console.error('Failed to fetch CSRF token from any endpoint');
       return null;
     } catch (error) {
       console.error('Failed to fetch CSRF token:', error);
       return null;
     }
+  }
+  // Always set in both cookie and localStorage if found
+  if (csrfToken) {
+    document.cookie = `XSRF-TOKEN=${csrfToken}; path=/; max-age=${24 * 60 * 60}`;
+    localStorage.setItem('csrfToken', csrfToken);
   }
   return csrfToken;
 };

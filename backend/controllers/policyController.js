@@ -154,7 +154,7 @@ function getCloudinaryResourceInfo(url) {
 
 // @desc    Create a new policy
 // @route   POST /api/policies/create
-// @access  Public
+// @access  Admin only
 exports.createPolicy = async (req, res) => {
     try {
         console.log('Received policy data:', req.body);
@@ -265,6 +265,7 @@ exports.createPolicy = async (req, res) => {
     } catch (err) {
         console.error('Policy creation error:', err);
         res.status(500).json({ 
+            status: 'error',
             message: 'Failed to create policy', 
             error: err.message,
             stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
@@ -552,6 +553,7 @@ exports.updatePolicy = async (req, res) => {
     } catch (err) {
         console.error('Policy update error:', err);
         res.status(500).json({ 
+            status: 'error',
             message: 'Error updating policy', 
             error: err.message,
             stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
@@ -627,6 +629,7 @@ exports.downloadPolicyFile = async (req, res) => {
     } catch (err) {
         console.error('File download error:', err);
         res.status(500).json({ 
+            status: 'error',
             message: 'Error downloading file', 
             error: err.message
         });

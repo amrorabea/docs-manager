@@ -10,7 +10,7 @@ const { verifyAdmin } = require('../../middleware/verifyAdmin');
 // @access  Admin only
 router.post('/create', verifyJWT, verifyAdmin, documentUpload, handleUploadErrors, uploadToCloudinary, policyController.createPolicy);
 
-// @desc    Get all policies (supports filtering by departmentId)
+// @desc    Get all policies (supports filtering by department)
 // @route   GET /api/policies/all
 // @access  Authenticated users
 router.get('/all', verifyJWT, policyController.getPolicies);

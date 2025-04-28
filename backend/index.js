@@ -206,6 +206,14 @@ app.use('/logout', logoutRoutes);
 // Security routes that don't require authentication
 app.use('/api/security', securityRoutes);
 
+// Force session creation for CSRF token endpoint
+app.use('/api/security/csrf-token', (req, res, next) => {
+  if (!req.session) {
+    req.session = {};
+  }
+  next();
+});
+
 // Cache health check endpoint
 app.get('/health', cacheMiddleware(60), (req, res) => {
   res.status(200).json({ 

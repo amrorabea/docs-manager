@@ -260,7 +260,7 @@ const PolicyList = () => {
         </div>
       </div>
 
-      {/* Error message */}
+      {/* Error message for failed fetch/search */}
       {error && <ErrorMessage message={error} onRetry={refreshPolicies} />}
       
       {/* Loading or no data states */}

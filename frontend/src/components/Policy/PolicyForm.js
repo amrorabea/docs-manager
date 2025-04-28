@@ -411,7 +411,7 @@ const PolicyForm = () => {
     >
       {error && <ErrorMessage message={error} />}
       
-      <form onSubmit={handleSubmit} className="policy-form">
+      <form onSubmit={handleSubmit} className="policy-form" aria-label={id ? 'تعديل سياسة' : 'إضافة سياسة'}>
         <div className="form-group">
           <label htmlFor="name">اسم السياسة</label>
           <input
@@ -422,6 +422,8 @@ const PolicyForm = () => {
             onChange={handleChange}
             required
             className="form-control"
+            aria-required="true"
+            aria-invalid={!!error && !formData.name}
           />
         </div>
         
@@ -434,6 +436,8 @@ const PolicyForm = () => {
             onChange={handleChange}
             required
             className="form-control"
+            aria-required="true"
+            aria-invalid={!!error && !formData.department}
           >
             <option value="">اختر الإدارة</option>
             {departments.map(dept => (
@@ -454,6 +458,8 @@ const PolicyForm = () => {
               max={id ? undefined : getTodayString()} // Only limit date for new policies
               required
               className="form-control"
+              aria-required="true"
+              aria-invalid={!!error && !formData.approvalDate}
             />
             <small className="form-text text-muted">
               {id ? 'تاريخ اعتماد السياسة' : 'لا يمكن أن يكون تاريخ الاعتماد في المستقبل'}
@@ -470,6 +476,8 @@ const PolicyForm = () => {
               onChange={handleChange}
               required
               className="form-control"
+              aria-required="true"
+              aria-invalid={!!error && !formData.approvalValidity}
             />
             <small className="form-text text-muted">
               سيتم تحديد حالة السياسة تلقائياً: ساري إذا كان تاريخ الانتهاء في المستقبل، ومنتهي إذا كان في الماضي.
@@ -490,6 +498,8 @@ const PolicyForm = () => {
               max="3"
               required
               className="form-control"
+              aria-required="true"
+              aria-invalid={!!error && !formData.reviewCycleYears}
             />
           </div>
         </div>

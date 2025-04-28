@@ -46,8 +46,8 @@ const createDepartment = async (req, res) => {
 };
 
 // @desc    Delete a department
-// @route   DELETE /api/departments/:id
-// @access  Public
+// @route   DELETE /api/departments/delete/:id
+// @access  Admin only
 const deleteDepartment = async (req, res) => {
     try {
         const deletedDepartment = await Department.findByIdAndDelete(req.params.id);
@@ -61,8 +61,8 @@ const deleteDepartment = async (req, res) => {
 };
 
 // @desc    Update a department
-// @route   PUT /api/departments/:id
-// @access  Public
+// @route   PUT /api/departments/update/:id
+// @access  Admin only
 const updateDepartment = async (req, res) => {
     try {
         const updatedDepartment = await Department.findByIdAndUpdate(req.params.id, req.body, { new: true });

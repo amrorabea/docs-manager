@@ -67,13 +67,13 @@ export const PolicyProvider = ({ children }) => {
       
       console.error('Error fetching policies:', err);
       
-      // Handle authentication errors
+      // Handle authentication errors and provide user-friendly feedback
       if (err.response?.status === 401 || err.response?.status === 403) {
-        setError('Authentication error. Please log in again.');
+        setError('ليس لديك صلاحية أو انتهت الجلسة. يرجى تسجيل الدخول مجددًا.');
         // Optionally log the user out on auth errors
         // logout();
       } else {
-        setError('Failed to load policies. Please try again later.');
+        setError('فشل تحميل السياسات. يرجى المحاولة لاحقًا.');
       }
       
       setPolicies([]);
@@ -119,11 +119,11 @@ export const PolicyProvider = ({ children }) => {
       
       console.error('Error searching policies:', err);
       
-      // Handle authentication errors
+      // Handle authentication errors and provide user-friendly feedback
       if (err.response?.status === 401 || err.response?.status === 403) {
-        setError('Authentication error. Please log in again.');
+        setError('ليس لديك صلاحية أو انتهت الجلسة. يرجى تسجيل الدخول مجددًا.');
       } else {
-        setError('Failed to search policies. Please try again later.');
+        setError('فشل البحث في السياسات. يرجى المحاولة لاحقًا.');
       }
     } finally {
       setLoading(false);
