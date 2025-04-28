@@ -147,31 +147,52 @@ axiosPrivate.interceptors.request.use(
   error => Promise.reject(error)
 );
 
+// Debug auth status for troubleshooting
+const debugAuthStatus = () => {
+  console.log({
+    accessToken: !!localStorage.getItem('accessToken'),
+    csrfToken: !!getCSRFToken(),
+    cookies: document.cookie,
+    currentPath: window.location.pathname
+  });
+};
+
+// Handle authentication failures
+const handleAuthFailure = () => {
+  if (process.env.NODE_ENV !== 'production') {
+    debugAuthStatus();
+  }
+  
+  clearAuthData();
+  
+  if (!isRedirecting && !window.location.pathname.includes('/login')) {
+    isRedirecting = true;
+    window.location.href = '/login';
+    setTimeout(() => {
+      isRedirecting = false;
+    }, 500);
+  }
+};
+
+// Modify the error interceptor
 axiosPrivate.interceptors.response.use(
   response => response,
   async error => {
-    const prevRequest = error?.config;
-    
-    // If it's a 401 error and we haven't retried yet
-    if (error.response?.status === 401 && !prevRequest._retry) {
-      prevRequest._retry = true;
-      try {
-        // Try to refresh the token
-        const response = await axiosPublic.get('/auth/refresh');
-        const newToken = response.data.accessToken;
-        
-        if (newToken) {
-          localStorage.setItem('accessToken', newToken);
-          prevRequest.headers['Authorization'] = `Bearer ${newToken}`;
-          return axiosPrivate(prevRequest);
-        }
-      } catch (refreshError) {
-        // If refresh fails, clear auth and redirect to login
-        clearAuthData();
-        window.location.href = '/login';
-        return Promise.reject(error);
+    // Clean up on error
+    if (error.config) {
+      const requestId = `${error.config.method}-${error.config.url}`;
+      if (pendingControllers.has(requestId)) {
+        const controller = pendingControllers.get(requestId);
+        clearTimeout(controller._timeoutId);
+        pendingControllers.delete(requestId);
       }
     }
+
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      handleAuthFailure();
+    }
+
     return Promise.reject(error);
   }
 );
@@ -353,26 +374,6 @@ export const clearCache = (urlPattern) => {
   });
 };
 
-// Handle authentication failures
-const handleAuthFailure = () => {
-  console.log('Authentication failure detected, clearing data and redirecting');
-  clearAuthData();
-  
-  if (!isRedirecting && !window.location.pathname.includes('/login')) {
-    isRedirecting = true;
-    
-    // Show a user-friendly message
-    alert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.');
-    
-    setTimeout(() => {
-      window.location.href = '/login';
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 500);
-    }, 0);
-  }
-};
-
 // Check if we have a valid token
 export const hasValidToken = () => {
   return !!localStorage.getItem('accessToken');
@@ -444,289 +445,24 @@ export default axiosPublic;
 
 // Special login function that ensures CSRF token handling
 export const loginRequest = async (credentials) => {
-  try {
-    // First get CSRF token
-    await axiosPublic.get('/api/security/csrf-token');
-    
-    // Get token after request
-    const csrfToken = getCSRFToken();
-    
-    const response = await axiosPublic.post('/auth/login', {
-      ...credentials,
-      _csrf: csrfToken
-    }, {
-      withCredentials: true,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.data?.accessToken) {
-      throw new Error('No access token received');
-    }
-
-    // Store the token
-    localStorage.setItem('accessToken', response.data.accessToken);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-
-    return response.data;
-  } catch (error) {
-    if (error.response?.status === 401) {
-      throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
-    }
-    if (error.response?.status === 429) {
-      throw new Error('محاولات كثيرة للدخول. الرجاء المحاولة لاحقاً');
-    }
-    throw new Error('حدث خطأ أثناء تسجيل الدخول');
-  }
-};
-
-// API request function
-const apiRequest = async (url, method = 'GET', data = null) => {
-  try {
-    // First ensure we have a CSRF token for non-GET requests
-    let csrfToken = null;
-    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      // For login specifically, always get a fresh token
-      if (url === '/auth/handleLogin') {
-        await axiosPublic.get('/api/security/csrf-token');
-      }
-      csrfToken = await ensureCSRFToken();
-    }
-    
-    // Use only standard headers to avoid CORS preflight issues
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    // In development, log the token being used
-    if (csrfToken && process.env.NODE_ENV !== 'production') {
-      console.log('Using CSRF token for request:', csrfToken.substring(0, 6) + '...');
-    } else if (method !== 'GET') {
-      console.warn('No CSRF token available for request to ' + url);
-    }
-
-    // Add Authorization header with the token if available
-    const accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const options = {
-      method,
-      headers,
-      credentials: 'include', // Important for cookies
-    };
-
-    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      const dataWithToken = { ...data };
-      
-      // For POST requests, add the token as part of the body
-      if (csrfToken) {
-        dataWithToken._csrf = csrfToken;
-      }
-      
-      options.body = JSON.stringify(dataWithToken);
-    }
-
-    // Create AbortController for fetch
-    const controller = new AbortController();
-    options.signal = controller.signal;
-    
-    // Set a timeout for the request
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, REQUEST_TIMEOUT);
-
     try {
-      const response = await fetch(`${BASE_URL}${url}`, options);
-      
-      // Clear the timeout
-      clearTimeout(timeoutId);
-      
-      // If the response indicates a CSRF error, log it clearly
-      if (response.status === 403) {
-        const responseData = await response.json();
-        if (responseData.error && responseData.error.includes('CSRF')) {
-          console.error('CSRF validation failed:', responseData.error);
-          console.debug('CSRF token used:', csrfToken);
-          // Refresh CSRF token for future requests
-          await refreshCSRFToken();
-        }
-        throw new Error(responseData.error || 'Forbidden');
-      }
+        const response = await axiosPublic.post('/auth/handleLogin', credentials, {
+            withCredentials: true,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
 
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-
-      // Try to parse JSON response safely
-      try {
-        return await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse response as JSON:', parseError);
-        return { success: true, message: 'Operation completed successfully' };
-      }
-    } catch (fetchError) {
-      // Clean up timeout on error
-      clearTimeout(timeoutId);
-      
-      // Handle cancellation
-      if (fetchError.name === 'AbortError') {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Request to ${url} was aborted/timed out`);
-        }
-        throw new Error('Request was canceled or timed out');
-      }
-      
-      throw fetchError;
-    }
-  } catch (error) {
-    // Provide more detailed error for debugging
-    if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
-      console.error('API request network error:', error);
-      throw new Error('Unable to connect to the server. Please check your internet connection.');
-    } else if (error.message.includes('canceled') || error.message.includes('aborted')) {
-      // Don't log cancellation errors in production
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('API request canceled:', error.message);
-      }
-      // Return a standardized cancel error
-      throw {
-        isCanceled: true,
-        message: 'Request was canceled',
-        originalError: error
-      };
-    } else {
-      console.error('API request error:', error);
-      throw error;
-    }
-  }
-};
-
-// Add request interceptors to axiosPublic as well for login/register endpoints
-axiosPublic.interceptors.request.use(
-  async (config) => {
-    try {
-      // Special handling for auth endpoints
-      if (config.url?.includes('/auth/')) {
-        const csrfToken = await ensureCSRFToken();
-        
-        // Add CSRF token to the body for POST requests instead of headers
-        // to avoid CORS preflight issues
-        if (csrfToken && config.method === 'post' && config.data) {
-          // If data is string (already stringified), parse it first
-          const data = typeof config.data === 'string' 
-            ? JSON.parse(config.data) 
-            : config.data;
-            
-          // Add CSRF token to the body
-          config.data = JSON.stringify({
-            ...data,
-            _csrf: csrfToken
-          });
+        if (response.data?.accessToken) {
+            localStorage.setItem('accessToken', response.data.accessToken);
+            return response.data;
         }
         
-        // Only set standard headers that don't trigger CORS preflight
-        config.headers['Content-Type'] = 'application/json';
-      }
-      
-      // Add Authorization header with the token if available
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-      
-      return config;
-    } catch (err) {
-      console.error('Request setup error:', err.message);
-      return Promise.reject(err);
-    }
-  },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add request interceptors to axiosPrivate
-axiosPrivate.interceptors.request.use(
-  async (config) => {
-    try {
-      // Do not set Content-Type for FormData objects - the browser handles this automatically
-      const isFormData = config.data instanceof FormData;
-      
-      if (isFormData) {
-        // Delete Content-Type header if it exists to let the browser set it with correct boundary
-        delete config.headers['Content-Type'];
-        console.log('FormData detected: Content-Type header removed to allow browser to set it correctly');
-      } else if (config.method !== 'get') {
-        // For non-GET requests that aren't FormData, ensure CSRF token is set
-        const csrfToken = await ensureCSRFToken();
-        
-        // For POST/PUT/PATCH, add CSRF to body instead of headers when possible
-        // to avoid CORS preflight issues
-        if (csrfToken && ['post', 'put', 'patch'].includes(config.method) && config.data) {
-          // If data is string (already stringified), parse it first
-          const data = typeof config.data === 'string' 
-            ? JSON.parse(config.data) 
-            : config.data;
-            
-          // Add CSRF token to the body
-          config.data = JSON.stringify({
-            ...data,
-            _csrf: csrfToken
-          });
+        throw new Error('No access token received');
+    } catch (error) {
+        if (error.response?.status === 401) {
+            throw new Error('Invalid credentials');
         }
-        
-        // Only use the Authorization header which usually doesn't trigger CORS preflight
-      }
-      
-      // Add Authorization header with the token if available
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        config.headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-      
-      return config;
-    } catch (err) {
-      console.error('Request setup error:', err.message);
-      return Promise.reject(err);
+        throw error;
     }
-  },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Ensure apiRequest is exported
-export { apiRequest };
-
-// Add this function at the end of the file
-export const debugAuthStatus = () => {
-  try {
-    const authData = {
-      accessToken: !!localStorage.getItem('accessToken'),
-      refreshToken: document.cookie.includes('refresh_token'),
-      csrfToken: !!getCSRFToken(),
-      user: localStorage.getItem('user'),
-      isAdmin: localStorage.getItem('isAdmin') === 'true',
-      cookies: document.cookie
-    };
-    
-    console.log('Auth Debug Info:', authData);
-    return authData;
-  } catch (err) {
-    console.error('Error debugging auth status:', err);
-    return { error: err.message };
-  }
-};
-
-// Add a helper function to increase timeout for specific API calls
-export const withExtendedTimeout = (config = {}) => {
-  return {
-    ...config,
-    timeout: 60000 // 60 seconds for operations that might take longer
-  };
 };

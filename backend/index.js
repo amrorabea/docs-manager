@@ -268,12 +268,14 @@ const connectDB = async () => {
   }
 };
 
-// Start server only after successful database connection
+let server; // Define server variable at the top level
+
+// Modify your startServer function
 const startServer = async () => {
   const connected = await connectDB();
   
   if (connected) {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     
     // Initialize scheduled tasks
     const { initScheduledTasks } = require('./scheduledTasks');
@@ -290,15 +292,17 @@ const gracefulShutdown = async () => {
     logger.info('Received shutdown signal, starting graceful shutdown...');
     
     // Close server first to stop accepting new requests
-    server.close(() => {
-      logger.info('Express server closed');
-    });
+    if (server) {
+      await new Promise((resolve) => {
+        server.close(resolve);
+        logger.info('Express server closed');
+      });
+    }
 
     // Close MongoDB connection
     await mongoose.connection.close();
     logger.info('MongoDB connection closed');
 
-    // Exit process
     process.exit(0);
   } catch (err) {
     logger.error('Error during shutdown:', err);
