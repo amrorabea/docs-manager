@@ -24,7 +24,7 @@ const app = express();
 
 // CORS middleware FIRST
 app.use(cors({
-  origin: ['https://policieslog.com', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'],
+  origin: ['http://209.74.80.185:5000', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -64,7 +64,7 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     maxAge: 24 * 60 * 60 * 1000,
-    domain: process.env.NODE_ENV === 'production' ? '.policieslog.com' : undefined
+    domain: process.env.NODE_ENV === 'production' ? '209.74.80.185:5000' : undefined
   },
   resave: false,
   saveUninitialized: false,
@@ -115,8 +115,8 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://policieslog.com", "https://*.googleapis.com"],
-      connectSrc: ["'self'", "https://policieslog.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000", "https://*.googleapis.com"],
+      connectSrc: ["'self'", "http://209.74.80.185:5000", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       fontSrc: ["'self'", "data:", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null

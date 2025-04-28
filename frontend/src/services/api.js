@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://209.74.80.185:5000'
+  ? 'http://209.74.80.185:5000'
   : 'http://localhost:5000';
 
 // Simple in-memory cache with size limit
