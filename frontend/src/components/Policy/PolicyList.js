@@ -113,13 +113,18 @@ const PolicyList = () => {
       const newWindow = window.open('', '_blank');
       
       if (newWindow) {
+        // تحضير اسم الملف
+        const safeFileName = policy.name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
+        const fileExtension = fileType === 'pdf' ? 'pdf' : 'docx';
+        const downloadFileName = `${safeFileName}.${fileExtension}`;
+
         // إضافة HTML للنافذة الجديدة مع معلومات التحميل
         newWindow.document.write(`
           <!DOCTYPE html>
           <html dir="rtl">
             <head>
               <title>جاري التحميل...</title>
-              <meta http-equiv="refresh" content="0;url=${url}">
+              <meta charset="UTF-8">
               <style>
                 body {
                   font-family: Arial, sans-serif;
@@ -180,14 +185,49 @@ const PolicyList = () => {
                   color: #666;
                 }
               </style>
+              <script>
+                // تحضير عملية التنزيل
+                window.onload = function() {
+                  const url = "${url}";
+                  const fileName = "${downloadFileName}";
+                  
+                  // تأخير بسيط لتحسين تجربة المستخدم
+                  setTimeout(function() {
+                    fetch(url)
+                      .then(response => response.blob())
+                      .then(blob => {
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const downloadLink = document.createElement('a');
+                        
+                        downloadLink.href = blobUrl;
+                        downloadLink.download = fileName;
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        
+                        // تحديث واجهة المستخدم
+                        document.getElementById('downloadStatus').innerHTML = 'تم بدء التنزيل!';
+                        document.getElementById('loader').style.borderTopColor = '#27ae60';
+                        
+                        // تنظيف بعد التنزيل
+                        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                      })
+                      .catch(error => {
+                        console.error('Download error:', error);
+                        document.getElementById('downloadStatus').innerHTML = 'حدث خطأ أثناء التنزيل، يرجى المحاولة مرة أخرى.';
+                        document.getElementById('downloadLink').style.display = 'block';
+                      });
+                  }, 1000);
+                };
+              </script>
             </head>
             <body>
               <div class="container">
                 <h2>جاري تحميل الملف</h2>
-                <div class="file-name">${policy.name}.${fileType}</div>
-                <div class="loader"></div>
-                <p>إذا لم يبدأ التحميل تلقائياً:</p>
-                <a href="${url}" download="${policy.name}.${fileType}">انقر هنا للتنزيل</a>
+                <div class="file-name">${downloadFileName}</div>
+                <div class="loader" id="loader"></div>
+                <p id="downloadStatus">جاري تحضير الملف للتنزيل...</p>
+                <a href="${url}" download="${downloadFileName}" id="downloadLink" style="display: none;">انقر هنا للتنزيل اليدوي</a>
               </div>
             </body>
           </html>
