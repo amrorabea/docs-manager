@@ -109,23 +109,94 @@ const PolicyList = () => {
     try {
       const url = fileType === 'pdf' ? policy.pdfFileUrl : policy.wordFileUrl;
       
-      // Create a GET request with responseType blob
-      const response = await fetch(url);
-      const blob = await response.blob();
+      // فتح نافذة جديدة للتنزيل
+      const newWindow = window.open('', '_blank');
       
-      // Create a blob URL for the file
-      const blobUrl = window.URL.createObjectURL(blob);
-      
-      // Create temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `${policy.name}.${fileType}`;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Clean up
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      if (newWindow) {
+        // إضافة HTML للنافذة الجديدة مع معلومات التحميل
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html dir="rtl">
+            <head>
+              <title>جاري التحميل...</title>
+              <meta http-equiv="refresh" content="0;url=${url}">
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  text-align: center;
+                  margin: 0;
+                  padding: 0;
+                  background-color: #f5f5f5;
+                  height: 100vh;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: center;
+                  align-items: center;
+                  color: #333;
+                }
+                .container {
+                  background-color: white;
+                  padding: 30px;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                  max-width: 500px;
+                  width: 90%;
+                }
+                h2 {
+                  margin-top: 0;
+                  color: #2c3e50;
+                }
+                .loader {
+                  border: 4px solid #f3f3f3;
+                  border-top: 4px solid #3498db;
+                  border-radius: 50%;
+                  width: 40px;
+                  height: 40px;
+                  animation: spin 2s linear infinite;
+                  margin: 20px auto;
+                }
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+                a {
+                  display: inline-block;
+                  margin-top: 15px;
+                  color: #3498db;
+                  text-decoration: none;
+                  padding: 10px 20px;
+                  background-color: #f0f8ff;
+                  border-radius: 4px;
+                  border: 1px solid #3498db;
+                  transition: all 0.3s;
+                }
+                a:hover {
+                  background-color: #3498db;
+                  color: white;
+                }
+                .file-name {
+                  font-weight: bold;
+                  margin-top: 15px;
+                  color: #666;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h2>جاري تحميل الملف</h2>
+                <div class="file-name">${policy.name}.${fileType}</div>
+                <div class="loader"></div>
+                <p>إذا لم يبدأ التحميل تلقائياً:</p>
+                <a href="${url}" download="${policy.name}.${fileType}">انقر هنا للتنزيل</a>
+              </div>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      } else {
+        console.error('Failed to open new window for download');
+        showError('فشل في فتح نافذة جديدة للتنزيل');
+      }
 
     } catch (error) {
       console.error('Download error:', error);

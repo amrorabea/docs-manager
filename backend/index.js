@@ -118,10 +118,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "data:", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000", "https://res.cloudinary.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.googleapis.com"],
+      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.googleapis.com"],
+      fontSrc: ["'self'", "data:", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://*.gstatic.com"],
+      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000", "https://res.cloudinary.com", "https://*.cloudinary.com"],
       connectSrc: [
         "'self'",
         "https://policieslog.com",
@@ -130,7 +130,9 @@ app.use(helmet({
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
         "https://res.cloudinary.com",
-        "https://*.cloudinary.com"
+        "https://*.cloudinary.com",
+        "https://*.googleapis.com",
+        "https://*.gstatic.com"
       ],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
