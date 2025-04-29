@@ -128,7 +128,8 @@ app.use(helmet({
         "http://209.74.80.185:5000",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
-        "https://res.cloudinary.com"
+        "https://res.cloudinary.com",
+        "https://*.cloudinary.com"
       ],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
