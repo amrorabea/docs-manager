@@ -304,6 +304,8 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow-x: auto; /* Add horizontal scrolling only when needed */
+  max-width: 100%; /* Ensure it doesn't exceed the container width */
 }
 
 .result-item {
@@ -313,6 +315,8 @@
   padding: 16px;
   margin-bottom: 16px;
   transition: all 0.3s ease;
+  word-break: break-word; /* Break long words if needed */
+  overflow-wrap: break-word; /* Ensure text wraps properly */
 }
 
 .result-item:hover {
@@ -322,6 +326,7 @@
 
 .result-header {
   display: flex;
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
@@ -334,6 +339,7 @@
   color: #2c3e50;
   font-weight: 600;
   font-size: 1.1rem;
+  min-width: 150px; /* Ensure title has enough space */
 }
 
 .result-header .file-name {
@@ -342,6 +348,10 @@
   background: #e9ecef;
   padding: 4px 8px;
   border-radius: 4px;
+  max-width: 300px; /* Limit width of filename */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .result-header .department-name {
@@ -376,6 +386,8 @@
   line-height: 1.6;
   color: #495057;
   font-size: 0.95rem;
+  overflow-wrap: break-word; /* Ensure text wraps properly */
+  word-break: break-word; /* Break long words if needed */
 }
 
 .highlight {
@@ -448,5 +460,21 @@
     margin-top: 10px;
     width: 100%;
     justify-content: space-between;
+  }
+  
+  .result-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .result-header .file-name,
+  .result-header .department-name,
+  .result-header .occurrence-count {
+    margin-top: 5px;
+    max-width: 100%;
+  }
+  
+  .result-header .occurrence-count {
+    margin-right: 0;
   }
 }

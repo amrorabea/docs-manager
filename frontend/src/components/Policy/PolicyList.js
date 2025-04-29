@@ -321,10 +321,15 @@ const PolicyList = () => {
                           )}
                         </div>
                         <p className="excerpt" dangerouslySetInnerHTML={{
-                          __html: match.excerpt.replace(
-                            new RegExp(`(${match.highlight})`, 'gi'),
-                            '<span class="highlight">$1</span>'
-                          )
+                          __html: match.excerpt.length > 500 
+                            ? match.excerpt.substring(0, 500).replace(
+                                new RegExp(`(${match.highlight})`, 'gi'),
+                                '<span class="highlight">$1</span>'
+                              ) + '...'
+                            : match.excerpt.replace(
+                                new RegExp(`(${match.highlight})`, 'gi'),
+                                '<span class="highlight">$1</span>'
+                              )
                         }} />
                       </div>
                     ))}
