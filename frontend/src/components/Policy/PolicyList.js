@@ -114,7 +114,7 @@ const PolicyList = () => {
       
       if (newWindow) {
         // تحضير اسم الملف
-        const safeFileName = policy.name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
+        const safeFileName = policy.name.replace(/[^a-zA-Z0-9\u0600-\u06FF\s.-]/g, '_');
         const fileExtension = fileType === 'pdf' ? 'pdf' : 'docx';
         const downloadFileName = `${safeFileName}.${fileExtension}`;
 

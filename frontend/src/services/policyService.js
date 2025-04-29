@@ -200,29 +200,44 @@ export const deletePolicy = async (id) => {
 
 export const downloadPolicyFile = async (id, fileType) => {
   try {
-    // Get the policy to access the direct Cloudinary URL
-    const policy = await getPolicy(id);
+    // Use the backend proxy endpoint to download the file
+    const response = await axiosPrivate.get(`/api/policies/download/${id}/${fileType}`, {
+      responseType: 'blob'
+    });
     
-    // Get the direct Cloudinary URL based on file type
-    let fileUrl;
-    if (fileType === 'word') {
-      fileUrl = policy.wordFileUrl;
-    } else if (fileType === 'pdf') {
-      fileUrl = policy.pdfFileUrl;
-      
-      // For PDFs, modify the Cloudinary URL to properly display in browser
-      // Change 'raw/upload' to 'image/view' for PDFs to render correctly
-      fileUrl = fileUrl.replace('/raw/upload/', '/image/view/');
+    // Create a blob URL from the response
+    const blob = new Blob([response.data]);
+    const url = window.URL.createObjectURL(blob);
+    
+    // Get the filename from Content-Disposition header if available
+    let filename = fileType === 'word' ? 'document.docx' : 'document.pdf';
+    
+    const contentDisposition = response.headers['content-disposition'];
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
+        // Decode the filename if it's URI encoded
+        try {
+          filename = decodeURIComponent(filename);
+        } catch (e) {
+          console.error('Error decoding filename:', e);
+        }
+      }
     }
     
-    if (!fileUrl) {
-      throw new Error(`No ${fileType} file available for this policy`);
-    }
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
     
-    // Open the Cloudinary URL directly in a new window/tab
-    window.open(fileUrl, '_blank');
+    // Cleanup
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error(`Error downloading ${fileType} file:`, error);
-    alert(`حدث خطأ أثناء محاولة فتح الملف. يرجى المحاولة مرة أخرى.`);
+    alert(`حدث خطأ أثناء محاولة تنزيل الملف. يرجى المحاولة مرة أخرى.`);
   }
 };

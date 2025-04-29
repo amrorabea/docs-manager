@@ -580,12 +580,17 @@ exports.downloadPolicyFile = async (req, res) => {
         let fileUrl;
         let fileName;
         
+        // Get a sanitized policy name for the filename
+        const sanitizedPolicyName = policy.name
+            .replace(/[^\w\u0600-\u06FF\s.-]/g, '') // Keep Arabic characters, alphanumeric, dots, hyphens
+            .replace(/\s+/g, '_'); // Replace spaces with underscores
+        
         if (fileType === 'word') {
             fileUrl = policy.wordFileUrl;
-            fileName = policy.wordFileName || 'document.docx';
+            fileName = `${sanitizedPolicyName}.docx`;
         } else {
             fileUrl = policy.pdfFileUrl;
-            fileName = policy.pdfFileName || 'document.pdf';
+            fileName = `${sanitizedPolicyName}.pdf`;
         }
         
         if (!fileUrl) {
@@ -623,9 +628,98 @@ exports.downloadPolicyFile = async (req, res) => {
             // Continue with original URL if encoding fails
         }
         
-        // Redirect to Cloudinary URL
-        res.redirect(fileUrl);
-        
+        // Proxy the file instead of redirecting to ensure proper filename
+        try {
+            const http = require('http');
+            const https = require('https');
+            
+            // Choose appropriate client based on URL protocol
+            const client = fileUrl.startsWith('https') ? https : http;
+            
+            // Set headers for the response
+            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+            
+            console.log(`Downloading file from: ${fileUrl}`);
+            console.log(`Setting filename to: ${fileName}`);
+            
+            // Make a request to the file URL
+            const request = client.get(fileUrl, (response) => {
+                // If we get a redirect, we need to follow it
+                if (response.statusCode === 301 || response.statusCode === 302) {
+                    const redirectUrl = response.headers.location;
+                    console.log(`Following redirect to: ${redirectUrl}`);
+                    
+                    // Make a new request to the redirect URL
+                    const redirectClient = redirectUrl.startsWith('https') ? https : http;
+                    const redirectRequest = redirectClient.get(redirectUrl, (redirectResponse) => {
+                        // If the redirect target responds with success, pipe it through
+                        if (redirectResponse.statusCode === 200) {
+                            // Set content type based on file type
+                            if (redirectResponse.headers['content-type']) {
+                                res.setHeader('Content-Type', redirectResponse.headers['content-type']);
+                            } else if (fileType === 'word') {
+                                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                            } else {
+                                res.setHeader('Content-Type', 'application/pdf');
+                            }
+                            
+                            // Stream the response to the client
+                            redirectResponse.pipe(res);
+                        } else {
+                            console.error(`Error fetching file: ${redirectResponse.statusCode}`);
+                            res.status(redirectResponse.statusCode).json({
+                                message: `Error fetching file: ${redirectResponse.statusMessage}`
+                            });
+                        }
+                    });
+                    
+                    redirectRequest.on('error', (err) => {
+                        console.error('Error following redirect:', err);
+                        res.status(500).json({
+                            message: 'Error downloading file',
+                            error: err.message
+                        });
+                    });
+                    
+                    // End the redirect request
+                    redirectRequest.end();
+                } else if (response.statusCode === 200) {
+                    // Set content type based on file type
+                    if (response.headers['content-type']) {
+                        res.setHeader('Content-Type', response.headers['content-type']);
+                    } else if (fileType === 'word') {
+                        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                    } else {
+                        res.setHeader('Content-Type', 'application/pdf');
+                    }
+                    
+                    // Stream the response to the client
+                    response.pipe(res);
+                } else {
+                    console.error(`Error fetching file: ${response.statusCode}`);
+                    res.status(response.statusCode).json({
+                        message: `Error fetching file: ${response.statusMessage}`
+                    });
+                }
+            });
+            
+            request.on('error', (err) => {
+                console.error('Error downloading file:', err);
+                res.status(500).json({
+                    message: 'Error downloading file',
+                    error: err.message
+                });
+            });
+            
+            // End the request
+            request.end();
+        } catch (err) {
+            console.error('File proxy error:', err);
+            res.status(500).json({
+                message: 'Error downloading file',
+                error: err.message
+            });
+        }
     } catch (err) {
         console.error('File download error:', err);
         res.status(500).json({ 
