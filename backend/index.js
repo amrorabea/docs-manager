@@ -125,6 +125,7 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "https://policieslog.com",
+        "http://policieslog.com",
         "http://209.74.80.185:5000",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
@@ -135,8 +136,8 @@ app.use(helmet({
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
     }
   },
-  crossOriginEmbedderPolicy: { policy: "require-corp" },
-  crossOriginResourcePolicy: { policy: "same-site" }
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
 // Add security headers checking and sanitization
