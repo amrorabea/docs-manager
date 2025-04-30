@@ -149,15 +149,15 @@ export const createPolicy = async (policyData) => {
     
     // When sending FormData, DO NOT set the Content-Type header
     // Let the browser set it automatically with the correct boundary
-    const response = await axiosPrivate.post('/api/policies/create', policyData, withExtendedTimeout({
-      // Remove the Content-Type header - the browser will set it correctly
+    const response = await axiosPrivate.post('/api/policies/create', policyData, {
       headers: {
-        // 'Content-Type': 'multipart/form-data' - DO NOT SET THIS
-      }
-    }));
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 10 * 60 * 1000 // 10 minutes
+    });
     return response.data;
   } catch (error) {
-    console.error('Policy creation error details:', error.response?.data || error.message);
+    console.error('Policy creation error details:', error, error.config);
     if (error.response) {
       console.error('Response status:', error.response.status);
       console.error('Response data:', JSON.stringify(error.response.data, null, 2));
