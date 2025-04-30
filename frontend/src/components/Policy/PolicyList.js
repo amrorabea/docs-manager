@@ -107,7 +107,7 @@ const PolicyList = () => {
 
   const handleDownload = async (policy, fileType) => {
     try {
-      const url = fileType === 'pdf' ? policy.pdfFileUrl : policy.wordFileUrl;
+      const url = fileType === 'pdf' ? (process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.pdfFileUrl}` : policy.pdfFileUrl) : (process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.wordFileUrl}` : policy.wordFileUrl);
       
       // فتح نافذة جديدة للتنزيل
       const newWindow = window.open('', '_blank');

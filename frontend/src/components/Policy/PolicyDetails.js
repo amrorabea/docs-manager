@@ -89,19 +89,19 @@ const PolicyDetails = () => {
         <div className="policy-details-section">
           <h3 className="section-title">الملفات</h3>
           <div className="policy-files-container">
-            {policy.pdfUrl && (
-              <a href={policy.pdfUrl} className="file-link-large pdf" target="_blank" rel="noopener noreferrer">
+            {policy.pdfFileUrl && (
+              <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.pdfFileUrl}` : policy.pdfFileUrl} className="file-link-large pdf" target="_blank" rel="noopener noreferrer">
                 <span className="file-icon">PDF</span>
                 <span className="file-name">عرض ملف PDF</span>
               </a>
             )}
-            {policy.wordUrl && (
-              <a href={policy.wordUrl} className="file-link-large word" target="_blank" rel="noopener noreferrer">
+            {policy.wordFileUrl && (
+              <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.wordFileUrl}` : policy.wordFileUrl} className="file-link-large word" target="_blank" rel="noopener noreferrer">
                 <span className="file-icon">Word</span>
                 <span className="file-name">عرض ملف Word</span>
               </a>
             )}
-            {!policy.pdfUrl && !policy.wordUrl && (
+            {!policy.pdfFileUrl && !policy.wordFileUrl && (
               <div className="no-files">لا توجد ملفات مرفقة</div>
             )}
           </div>

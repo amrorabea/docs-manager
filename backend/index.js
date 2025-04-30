@@ -121,7 +121,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.googleapis.com"],
       styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.googleapis.com"],
       fontSrc: ["'self'", "data:", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://*.gstatic.com"],
-      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000", "https://res.cloudinary.com", "https://*.cloudinary.com"],
+      imgSrc: ["'self'", "data:", "http://209.74.80.185:5000"],
       connectSrc: [
         "'self'",
         "https://policieslog.com",
@@ -129,8 +129,6 @@ app.use(helmet({
         "http://209.74.80.185:5000",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
-        "https://res.cloudinary.com",
-        "https://*.cloudinary.com",
         "https://*.googleapis.com",
         "https://*.gstatic.com"
       ],

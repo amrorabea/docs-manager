@@ -2,155 +2,9 @@ const Policy = require('../models/Policy');
 const Department = require('../models/Department');
 const path = require('path');
 const fs = require('fs');
-const cloudinary = require('../config/cloudinaryConfig');
 const mammoth = require('mammoth');
 const axios = require('axios');
 // We'll add docx text extraction later with a proper library
-
-// Helper to handle Cloudinary URLs
-const getFileUrl = (req, fileType) => {
-    if (!req.cloudinaryFiles || !req.cloudinaryFiles[fileType]) return null;
-    return req.cloudinaryFiles[fileType].url;
-};
-
-// Helper function to get the correct Cloudinary parameters for a file
-function getCloudinaryResourceInfo(url) {
-    if (!url) return { publicId: null, resourceType: null };
-    
-    console.log('Extracting Cloudinary info from URL:', url);
-    
-    try {
-        // Extract the public ID and determine resource type from the URL
-        const urlObj = new URL(url);
-        const pathParts = urlObj.pathname.split('/');
-        
-        // Determine file extension from the URL
-        const extension = pathParts[pathParts.length - 1].split('.').pop().toLowerCase();
-        
-        // Determine resource type based on file extension
-        let resourceType = 'raw'; // Default resource type
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-            resourceType = 'image';
-        } else if (['mp4', 'mov'].includes(extension)) {
-            resourceType = 'video';
-        } else if (['pdf', 'doc', 'docx'].includes(extension)) {
-            resourceType = 'raw'; // Documents are typically 'raw' in Cloudinary
-        }
-        
-        // Extract publicId - handle various URL formats
-        let publicId = null;
-        
-        // Check for several common Cloudinary URL patterns
-        
-        // Pattern 1: Standard Cloudinary URL with /upload/ path
-        if (url.includes('/upload/')) {
-            console.log('Using standard Cloudinary URL pattern with /upload/');
-            const uploadParts = url.split('/upload/');
-            if (uploadParts.length > 1) {
-                // Get everything after /upload/
-                let pathAfterUpload = uploadParts[1];
-                
-                // Remove query string if present
-                if (pathAfterUpload.includes('?')) {
-                    pathAfterUpload = pathAfterUpload.split('?')[0];
-                }
-                
-                // Remove version if present (v1234567/)
-                if (pathAfterUpload.match(/^v\d+\//)) {
-                    pathAfterUpload = pathAfterUpload.replace(/^v\d+\//, '');
-                }
-                
-                // This is the full public ID including the file extension
-                const fullPublicId = pathAfterUpload;
-                
-                // Some Cloudinary configurations require extension, others don't
-                // We'll return both with and without extension
-                if (fullPublicId.includes('.')) {
-                    publicId = fullPublicId.substring(0, fullPublicId.lastIndexOf('.'));
-                    console.log(`Extracted publicId without extension: ${publicId}`);
-                    // But we'll use the full ID including extension
-                    publicId = fullPublicId;
-                } else {
-                    publicId = fullPublicId;
-                }
-            }
-        }
-        
-        // Pattern 2: URL with folder structure like /documents/word/ or /documents/pdf/
-        if (!publicId) {
-            console.log('Using folder structure pattern');
-            // Try to identify folder structure in URL
-            if (url.includes('/documents/word/')) {
-                const parts = url.split('/documents/word/');
-                const filename = parts[parts.length - 1].split('?')[0]; // Remove query params
-                publicId = 'documents/word/' + filename;
-                console.log(`Extracted publicId from folder structure: ${publicId}`);
-            } else if (url.includes('/documents/pdf/')) {
-                const parts = url.split('/documents/pdf/');
-                const filename = parts[parts.length - 1].split('?')[0]; // Remove query params
-                publicId = 'documents/pdf/' + filename;
-                console.log(`Extracted publicId from folder structure: ${publicId}`);
-            }
-        }
-        
-        // Pattern 3: Just use the filename as public ID with appropriate folder
-        if (!publicId) {
-            console.log('Using filename-based pattern');
-            // Last resort fallback - get filename and add folder
-            const filename = pathParts[pathParts.length - 1].split('?')[0]; // Get filename and remove query params
-            
-            // Add appropriate folder based on extension
-            if (['doc', 'docx'].includes(extension)) {
-                publicId = `documents/word/${filename}`;
-            } else if (extension === 'pdf') {
-                publicId = `documents/pdf/${filename}`;
-            } else {
-                publicId = filename;
-            }
-            console.log(`Extracted publicId using filename: ${publicId}`);
-        }
-        
-        console.log('Final extracted Cloudinary info:', { publicId, resourceType, extension });
-        return { publicId, resourceType };
-    } catch (error) {
-        console.error('Error extracting Cloudinary info:', error);
-        
-        // Fallback method for if parsing fails
-        try {
-            console.log('Using fallback extraction method');
-            // Simple extraction based on URL path and extension
-            const urlPath = url.split('?')[0]; // Remove query parameters
-            const pathParts = urlPath.split('/');
-            const filename = pathParts[pathParts.length - 1];
-            const extension = filename.split('.').pop().toLowerCase();
-            const filenameWithoutExt = filename.split('.')[0];
-            
-            // Determine folder path based on extension
-            let publicId;
-            if (['doc', 'docx'].includes(extension)) {
-                publicId = `documents/word/${filename}`;
-            } else if (extension === 'pdf') {
-                publicId = `documents/pdf/${filename}`;
-            } else {
-                publicId = filename;
-            }
-            
-            // Determine resource type
-            let resourceType = 'raw';
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-                resourceType = 'image';
-            } else if (['mp4', 'mov'].includes(extension)) {
-                resourceType = 'video';
-            }
-            
-            console.log('Fallback Cloudinary info:', { publicId, resourceType, extension });
-            return { publicId, resourceType };
-        } catch (fallbackError) {
-            console.error('Fallback extraction also failed:', fallbackError);
-            return { publicId: null, resourceType: null };
-        }
-    }
-}
 
 // @desc    Create a new policy
 // @route   POST /api/policies/create
@@ -223,22 +77,17 @@ exports.createPolicy = async (req, res) => {
         let wordFileName = null;
         let pdfFileUrl = null;
         let pdfFileName = null;
-        let textContent = ''; // Will be populated with extracted text
-        
-        if (req.cloudinaryFiles && req.cloudinaryFiles.wordFile) {
-            wordFileUrl = req.cloudinaryFiles.wordFile.url;
-            wordFileName = req.cloudinaryFiles.wordFile.originalName;
-            
-            // Here we would extract text from Word document for indexing
-            // This will be implemented with a proper library
-            textContent = name; // For now, just use the policy name
+        let textContent = name; // For now, just use the policy name
+
+        if (req.files && req.files.wordFile && req.files.wordFile.length > 0) {
+            const wordFile = req.files.wordFile[0];
+            wordFileUrl = `/uploads/${wordFile.filename}`;
+            wordFileName = wordFile.originalname;
         }
-        
-        if (req.cloudinaryFiles && req.cloudinaryFiles.pdfFile) {
-            pdfFileUrl = req.cloudinaryFiles.pdfFile.url;
-            pdfFileName = req.cloudinaryFiles.pdfFile.originalName;
-            
-            // Here we would extract text from PDF for indexing if needed
+        if (req.files && req.files.pdfFile && req.files.pdfFile.length > 0) {
+            const pdfFile = req.files.pdfFile[0];
+            pdfFileUrl = `/uploads/${pdfFile.filename}`;
+            pdfFileName = pdfFile.originalname;
         }
 
         // Create policy object with provided data
@@ -487,43 +336,25 @@ exports.updatePolicy = async (req, res) => {
         let pdfFileUrl = undefined;
         let pdfFileName = undefined;
         let textContent = name; // Default to name
-        
-        // Check if we need to delete existing Word file from Cloudinary
-        if (req.cloudinaryFiles && req.cloudinaryFiles.wordFile) {
-            // If there's an existing Word file and we're uploading a new one, delete the old one first
+
+        // Delete old files if new ones are uploaded
+        if (req.files && req.files.wordFile && req.files.wordFile.length > 0) {
             if (policyExists.wordFileUrl) {
-                const { publicId, resourceType } = getCloudinaryResourceInfo(policyExists.wordFileUrl);
-                
-                try {
-                    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-                    console.log(`Successfully deleted old Word file from Cloudinary: ${publicId}`);
-                } catch (err) {
-                    console.error('Error deleting old Word file from Cloudinary:', err);
-                }
+                const oldPath = path.join(__dirname, '..', policyExists.wordFileUrl);
+                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             }
-            
-            // Set new Word file information
-            wordFileUrl = req.cloudinaryFiles.wordFile.url;
-            wordFileName = req.cloudinaryFiles.wordFile.originalName;
+            const wordFile = req.files.wordFile[0];
+            wordFileUrl = `/uploads/${wordFile.filename}`;
+            wordFileName = wordFile.originalname;
         }
-        
-        // Check if we need to delete existing PDF file from Cloudinary
-        if (req.cloudinaryFiles && req.cloudinaryFiles.pdfFile) {
-            // If there's an existing PDF file and we're uploading a new one, delete the old one first
+        if (req.files && req.files.pdfFile && req.files.pdfFile.length > 0) {
             if (policyExists.pdfFileUrl) {
-                const { publicId, resourceType } = getCloudinaryResourceInfo(policyExists.pdfFileUrl);
-                
-                try {
-                    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-                    console.log(`Successfully deleted old PDF file from Cloudinary: ${publicId}`);
-                } catch (err) {
-                    console.error('Error deleting old PDF file from Cloudinary:', err);
-                }
+                const oldPath = path.join(__dirname, '..', policyExists.pdfFileUrl);
+                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             }
-            
-            // Set new PDF file information
-            pdfFileUrl = req.cloudinaryFiles.pdfFile.url;
-            pdfFileName = req.cloudinaryFiles.pdfFile.originalName;
+            const pdfFile = req.files.pdfFile[0];
+            pdfFileUrl = `/uploads/${pdfFile.filename}`;
+            pdfFileName = pdfFile.originalname;
         }
 
         // Create update object with provided data
@@ -597,129 +428,12 @@ exports.downloadPolicyFile = async (req, res) => {
             return res.status(404).json({ message: `${fileType} file not found for this policy` });
         }
         
-        // Check if the URL needs to be modified for correct resource type access
-        if (fileUrl.includes('/image/upload/') && fileType === 'pdf') {
-            // Fix the URL to use raw resource type instead of image for PDFs
-            fileUrl = fileUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`Modified PDF URL to use raw resource type: ${fileUrl}`);
+        // Serve the file from disk
+        const filePath = path.join(__dirname, '..', fileUrl);
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: 'File not found on server' });
         }
-        
-        // Ensure URL is properly encoded 
-        try {
-            // Parse the URL first to handle any existing encoding
-            const parsedUrl = new URL(fileUrl);
-            // Create a clean URL with properly encoded pathname
-            const encodedPathname = parsedUrl.pathname.split('/')
-                .map((segment, index, array) => {
-                    // Don't encode the version number or other structural parts
-                    if (segment.startsWith('v') && /^v\d+$/.test(segment)) return segment;
-                    // Only encode the filename (last segment)
-                    if (index === array.length - 1) return encodeURIComponent(segment);
-                    return segment;
-                })
-                .join('/');
-            
-            // Reassemble the URL with encoded path
-            parsedUrl.pathname = encodedPathname;
-            fileUrl = parsedUrl.toString();
-            console.log(`Encoded file URL: ${fileUrl}`);
-        } catch (urlError) {
-            console.error('Error encoding URL:', urlError);
-            // Continue with original URL if encoding fails
-        }
-        
-        // Proxy the file instead of redirecting to ensure proper filename
-        try {
-            const http = require('http');
-            const https = require('https');
-            
-            // Choose appropriate client based on URL protocol
-            const client = fileUrl.startsWith('https') ? https : http;
-            
-            // Set headers for the response
-            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
-            
-            console.log(`Downloading file from: ${fileUrl}`);
-            console.log(`Setting filename to: ${fileName}`);
-            
-            // Make a request to the file URL
-            const request = client.get(fileUrl, (response) => {
-                // If we get a redirect, we need to follow it
-                if (response.statusCode === 301 || response.statusCode === 302) {
-                    const redirectUrl = response.headers.location;
-                    console.log(`Following redirect to: ${redirectUrl}`);
-                    
-                    // Make a new request to the redirect URL
-                    const redirectClient = redirectUrl.startsWith('https') ? https : http;
-                    const redirectRequest = redirectClient.get(redirectUrl, (redirectResponse) => {
-                        // If the redirect target responds with success, pipe it through
-                        if (redirectResponse.statusCode === 200) {
-                            // Set content type based on file type
-                            if (redirectResponse.headers['content-type']) {
-                                res.setHeader('Content-Type', redirectResponse.headers['content-type']);
-                            } else if (fileType === 'word') {
-                                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-                            } else {
-                                res.setHeader('Content-Type', 'application/pdf');
-                            }
-                            
-                            // Stream the response to the client
-                            redirectResponse.pipe(res);
-                        } else {
-                            console.error(`Error fetching file: ${redirectResponse.statusCode}`);
-                            res.status(redirectResponse.statusCode).json({
-                                message: `Error fetching file: ${redirectResponse.statusMessage}`
-                            });
-                        }
-                    });
-                    
-                    redirectRequest.on('error', (err) => {
-                        console.error('Error following redirect:', err);
-                        res.status(500).json({
-                            message: 'Error downloading file',
-                            error: err.message
-                        });
-                    });
-                    
-                    // End the redirect request
-                    redirectRequest.end();
-                } else if (response.statusCode === 200) {
-                    // Set content type based on file type
-                    if (response.headers['content-type']) {
-                        res.setHeader('Content-Type', response.headers['content-type']);
-                    } else if (fileType === 'word') {
-                        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-                    } else {
-                        res.setHeader('Content-Type', 'application/pdf');
-                    }
-                    
-                    // Stream the response to the client
-                    response.pipe(res);
-                } else {
-                    console.error(`Error fetching file: ${response.statusCode}`);
-                    res.status(response.statusCode).json({
-                        message: `Error fetching file: ${response.statusMessage}`
-                    });
-                }
-            });
-            
-            request.on('error', (err) => {
-                console.error('Error downloading file:', err);
-                res.status(500).json({
-                    message: 'Error downloading file',
-                    error: err.message
-                });
-            });
-            
-            // End the request
-            request.end();
-        } catch (err) {
-            console.error('File proxy error:', err);
-            res.status(500).json({
-                message: 'Error downloading file',
-                error: err.message
-            });
-        }
+        res.download(filePath, fileName);
     } catch (err) {
         console.error('File download error:', err);
         res.status(500).json({ 
@@ -766,101 +480,22 @@ exports.deletePolicy = async (req, res) => {
         
         console.log(`Policy found. Name: ${policy.name}`);
         
-        // Delete associated files from cloudinary
+        // Delete associated files from disk
         const filesToDelete = [];
         if (policy.pdfFileUrl) filesToDelete.push(policy.pdfFileUrl);
         if (policy.wordFileUrl) filesToDelete.push(policy.wordFileUrl);
         
         console.log(`Found ${filesToDelete.length} files to delete from Cloudinary`);
         
-        // Delete each file from Cloudinary
+        // Delete each file from disk
         for (const fileUrl of filesToDelete) {
-            try {
-                console.log(`Processing file deletion for: ${fileUrl}`);
-                
-                // Get Cloudinary resource info (public ID and resource type)
-                const { publicId, resourceType } = getCloudinaryResourceInfo(fileUrl);
-                
-                if (!publicId) {
-                    console.error(`Could not extract public ID from URL: ${fileUrl}`);
-                    continue;
-                }
-                
-                console.log(`Attempting to delete from Cloudinary. Public ID: ${publicId}, Resource Type: ${resourceType || 'raw'}`);
-                
-                // Primary deletion attempt
-                try {
-                    const result = await cloudinary.uploader.destroy(
-                        publicId, 
-                        { resource_type: resourceType || 'raw' }
-                    );
-                    console.log(`Cloudinary deletion result for ${publicId}:`, result);
-                    
-                    if (result.result === 'ok') {
-                        console.log(`Successfully deleted file with public ID: ${publicId}`);
-                    } else {
-                        throw new Error(`Cloudinary returned non-success: ${result.result}`);
-                    }
-                } catch (primaryError) {
-                    console.error(`Primary deletion attempt failed for ${publicId}:`, primaryError.message);
-                    
-                    // Fallback: Try with alternative public ID formats
-                    try {
-                        console.log(`Trying fallback deletion approaches for ${fileUrl}`);
-                        
-                        // Attempt 1: Try without file extension
-                        if (publicId.includes('.')) {
-                            const publicIdWithoutExtension = publicId.substring(0, publicId.lastIndexOf('.'));
-                            console.log(`Trying without extension: ${publicIdWithoutExtension}`);
-                            
-                            try {
-                                const result = await cloudinary.uploader.destroy(
-                                    publicIdWithoutExtension,
-                                    { resource_type: resourceType || 'raw' }
-                                );
-                                console.log(`Fallback deletion result:`, result);
-                                if (result.result === 'ok') {
-                                    console.log(`Successfully deleted with fallback ID: ${publicIdWithoutExtension}`);
-                                    continue; // Skip to next file
-                                }
-                            } catch (fallbackError) {
-                                console.error(`Fallback deletion failed:`, fallbackError.message);
-                            }
-                        }
-                        
-                        // Attempt 2: Try with different resource types
-                        const alternativeResourceTypes = ['raw', 'image', 'video'].filter(rt => rt !== resourceType);
-                        
-                        for (const altResourceType of alternativeResourceTypes) {
-                            try {
-                                console.log(`Trying with alternative resource type: ${altResourceType} for ID: ${publicId}`);
-                                const result = await cloudinary.uploader.destroy(
-                                    publicId,
-                                    { resource_type: altResourceType }
-                                );
-                                
-                                if (result.result === 'ok') {
-                                    console.log(`Successfully deleted with resource type ${altResourceType}`);
-                                    break; // Success, stop trying alternatives
-                                }
-                            } catch (altResourceError) {
-                                console.error(`Failed with resource type ${altResourceType}:`, altResourceError.message);
-                            }
-                        }
-                        
-                        // Log if all fallbacks failed
-                        console.log(`All deletion attempts completed for file: ${fileUrl}`);
-                    } catch (fallbackError) {
-                        console.error(`All fallback approaches failed:`, fallbackError.message);
-                    }
-                }
-            } catch (fileError) {
-                console.error(`Error processing file ${fileUrl}:`, fileError.message);
-                // Continue to next file rather than failing the entire operation
+            const filePath = path.join(__dirname, '..', fileUrl);
+            if (fs.existsSync(filePath)) {
+                try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
             }
         }
         
-        // Delete the policy from the database regardless of cloudinary status
+        // Delete the policy from the database
         await Policy.findByIdAndDelete(id);
         console.log(`Policy ${id} deleted from database`);
         

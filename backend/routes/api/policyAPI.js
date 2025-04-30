@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const policyController = require('../../controllers/policyController');
-const { documentUpload, uploadToCloudinary, handleUploadErrors } = require('../../middleware/cloudinaryUploadMiddleware');
+const { policyUpload, handleUploadErrors } = require('../../middleware/uploadMiddleware');
 const { verifyJWT } = require('../../middleware/verifyJWT');
 const { verifyAdmin } = require('../../middleware/verifyAdmin');
 
 // @desc    Create a new policy
 // @route   POST /api/policies/create
 // @access  Admin only
-router.post('/create', verifyJWT, verifyAdmin, documentUpload, handleUploadErrors, uploadToCloudinary, policyController.createPolicy);
+router.post('/create', verifyJWT, verifyAdmin, policyUpload, handleUploadErrors, policyController.createPolicy);
 
 // @desc    Get all policies (supports filtering by department)
 // @route   GET /api/policies/all
@@ -48,7 +48,7 @@ router.post('/update-statuses', verifyJWT, verifyAdmin, policyController.updateP
 // @desc    Update a policy by id
 // @route   PUT /api/policies/update/:id
 // @access  Admin only
-router.put('/update/:id', verifyJWT, verifyAdmin, documentUpload, handleUploadErrors, uploadToCloudinary, policyController.updatePolicy);
+router.put('/update/:id', verifyJWT, verifyAdmin, policyUpload, handleUploadErrors, policyController.updatePolicy);
 
 // @desc    Delete a policy by id
 // @route   DELETE /api/policies/delete/:id

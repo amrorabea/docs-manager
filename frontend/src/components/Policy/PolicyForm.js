@@ -517,7 +517,7 @@ const PolicyForm = () => {
           {existingFiles.wordFileUrl && (
             <div className="existing-file">
               <span>الملف الحالي: </span>
-              <a href={existingFiles.wordFileUrl} target="_blank" rel="noopener noreferrer">
+              <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${existingFiles.wordFileUrl}` : existingFiles.wordFileUrl} target="_blank" rel="noopener noreferrer">
                 عرض الملف الحالي
               </a>
             </div>
@@ -537,7 +537,7 @@ const PolicyForm = () => {
           {existingFiles.pdfFileUrl && (
             <div className="existing-file">
               <span>الملف الحالي: </span>
-              <a href={existingFiles.pdfFileUrl} target="_blank" rel="noopener noreferrer">
+              <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${existingFiles.pdfFileUrl}` : existingFiles.pdfFileUrl} target="_blank" rel="noopener noreferrer">
                 عرض الملف الحالي
               </a>
             </div>

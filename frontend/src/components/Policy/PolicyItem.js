@@ -20,11 +20,11 @@ const PolicyItem = ({ policy, onDelete }) => {
         </span>
       </div>
       <div className="policy-files">
-        {policy.pdfUrl && (
-          <a href={policy.pdfUrl} className="file-link pdf" target="_blank" rel="noopener noreferrer">PDF</a>
+        {policy.pdfFileUrl && (
+          <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.pdfFileUrl}` : policy.pdfFileUrl} className="file-link pdf" target="_blank" rel="noopener noreferrer">PDF</a>
         )}
-        {policy.wordUrl && (
-          <a href={policy.wordUrl} className="file-link word" target="_blank" rel="noopener noreferrer">Word</a>
+        {policy.wordFileUrl && (
+          <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.wordFileUrl}` : policy.wordFileUrl} className="file-link word" target="_blank" rel="noopener noreferrer">Word</a>
         )}
       </div>
       <div className="policy-actions">
