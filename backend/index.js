@@ -118,8 +118,18 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.googleapis.com"],
-      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.googleapis.com"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+        "https://*.googleapis.com"
+      ],
+      styleSrcElem: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+        "https://*.googleapis.com"
+      ],
       fontSrc: ["'self'", "data:", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://*.gstatic.com"],
       imgSrc: ["'self'", "data:", "http://209.74.80.185:5000"],
       connectSrc: [
@@ -250,14 +260,13 @@ const connectDB = async () => {
 // Start server only after successful database connection
 const startServer = async () => {
   const connected = await connectDB();
-  
   if (connected) {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    
+    const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    // Increase server timeout for large file uploads (default is 2 minutes)
+    server.setTimeout(10 * 60 * 1000); // 10 minutes
     // Initialize scheduled tasks
     const { initScheduledTasks } = require('./scheduledTasks');
     initScheduledTasks();
-    
     // Set up graceful shutdown
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);

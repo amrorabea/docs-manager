@@ -11,8 +11,15 @@ const axios = require('axios');
 // @access  Admin only
 exports.createPolicy = async (req, res) => {
     try {
+        console.log('--- Policy Creation Request Start ---');
         console.log('Received policy data:', req.body);
-        console.log('Received cloudinary files:', req.cloudinaryFiles);
+        if (req.files) {
+            console.log('Received files:', Object.keys(req.files));
+            if (req.files.wordFile) console.log('Word file:', req.files.wordFile[0]);
+            if (req.files.pdfFile) console.log('PDF file:', req.files.pdfFile[0]);
+        } else {
+            console.log('No files received');
+        }
         
         // Extract fields
         const { 
@@ -110,6 +117,7 @@ exports.createPolicy = async (req, res) => {
         // Create the new policy
         const policy = await Policy.create(policyData);
 
+        console.log('Policy created successfully:', policy._id);
         res.status(201).json(policy);
     } catch (err) {
         console.error('Policy creation error:', err);
