@@ -44,7 +44,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB file size limit
+    fileSize: 51 * 1024 * 1024, // 51MB file size limit
   }
 });
 
@@ -168,4 +168,4 @@ module.exports = {
   documentUpload, 
   uploadToCloudinary, 
   handleUploadErrors 
-}; 
+};
