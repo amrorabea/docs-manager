@@ -157,7 +157,8 @@ app.use(bruteForceProtection.middleware());
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use(express.json());
+app.use(express.json({ limit: '51mb' }));
+app.use(express.urlencoded({ extended: true, limit: '51mb' }));
 
 // Apply sanitization globally to all routes with request bodies
 app.use(sanitizeBody);
