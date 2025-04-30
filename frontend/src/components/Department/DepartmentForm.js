@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { createDepartment } from '../../services/departmentService';
 import './Department.css';
+import useToast from '../../hooks/useToast';
 
 const DepartmentForm = ({ onDepartmentAdded, onCancel }) => {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showError } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!name.trim()) {
       setError('اسم الإدارة مطلوب');
+      showError('اسم الإدارة مطلوب');
       return;
     }
     
@@ -25,6 +28,7 @@ const DepartmentForm = ({ onDepartmentAdded, onCancel }) => {
     } catch (err) {
       console.error('Error creating department:', err);
       setError('فشل إنشاء الإدارة. يرجى المحاولة مرة أخرى.');
+      showError('فشل إنشاء الإدارة. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }

@@ -22,8 +22,9 @@ const cleanupOldRequests = () => {
   }
 };
 
-// Run cleanup every hour
-setInterval(cleanupOldRequests, 60 * 60 * 1000);
+// Store interval handles for cleanup on shutdown
+let cleanupOldRequestsInterval = setInterval(cleanupOldRequests, 60 * 60 * 1000);
+let cleanupFailuresInterval; // Ensure this is defined at the top level
 
 /**
  * Rate limit by IP address
@@ -51,6 +52,7 @@ exports.ipRateLimiter = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
     // Check if the IP has made too many requests
     if (recentRequests.length >= maxRequests) {
       return res.status(429).json({ 
+        status: 'error',
         message: 'Too many requests, please try again later',
         retryAfter: Math.ceil(windowMs / 1000 / 60) // minutes
       });
@@ -90,6 +92,7 @@ exports.loginRateLimiter = (maxRequests = 5, windowMs = 5 * 60 * 1000) => {
     // Check if the IP has made too many login attempts
     if (recentRequests.length >= maxRequests) {
       return res.status(429).json({ 
+        status: 'error',
         message: 'Too many login attempts, please try again later',
         retryAfter: Math.ceil(windowMs / 1000 / 60) // minutes
       });
@@ -119,8 +122,8 @@ exports.bruteForceProtection = (options = {}) => {
     failureWindow: options.failureWindow || 30 * 60 * 1000, // 30 minutes
   };
   
-  // Clean up old entries periodically
-  setInterval(() => {
+  // Store interval handle for cleanup
+  cleanupFailuresInterval = setInterval(() => {
     const now = Date.now();
     failedAttempts.forEach((data, key) => {
       if (now - data.lastFailure > config.failureWindow) {
@@ -163,6 +166,7 @@ exports.bruteForceProtection = (options = {}) => {
       const longestBlock = Math.max(ipBlock || 0, usernameBlock || 0, combinedBlock || 0);
       
       return res.status(429).json({
+        status: 'error',
         message: 'Too many failed login attempts. Please try again later.',
         retryAfter: longestBlock
       });
@@ -184,8 +188,8 @@ exports.bruteForceProtection = (options = {}) => {
           
           // Check if we should block this identifier
           if (data.count >= config.maxConsecutiveFailures) {
-            // Calculate block duration with exponential backoff
-            // Each consecutive block doubles the duration
+            // Exponential backoff: each block doubles in duration, up to maxBlockDuration
+            // Example: 5, 10, 20, 40, ... minutes
             const blockMultiplier = Math.pow(2, Math.floor(data.count / config.maxConsecutiveFailures) - 1);
             const blockDuration = Math.min(
               config.initialBlockDuration * blockMultiplier,
@@ -217,4 +221,7 @@ exports.bruteForceProtection = (options = {}) => {
     
     next();
   };
-}; 
+};
+
+// Optional: export interval handles for cleanup on shutdown
+exports._intervalHandles = { cleanupOldRequestsInterval, cleanupFailuresInterval };

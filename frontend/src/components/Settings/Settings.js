@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FaUser, FaBell, FaShieldAlt, FaDatabase, FaPalette } from 'react-icons/fa';
 import Button from '../UI/Button';
 import './Settings.css';
+import useToast from '../../hooks/useToast';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -33,6 +34,8 @@ const Settings = () => {
     }
   });
 
+  const { showSuccess } = useToast();
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };
@@ -50,7 +53,7 @@ const Settings = () => {
   const handleSaveSettings = (e) => {
     e.preventDefault();
     // Here you would save the settings to the server
-    alert('تم حفظ الإعدادات بنجاح');
+    showSuccess('تم حفظ الإعدادات بنجاح');
   };
 
   const renderProfileSettings = () => (
@@ -365,4 +368,4 @@ const Settings = () => {
   );
 };
 
-export default Settings; 
+export default Settings;

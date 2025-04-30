@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import useAdminProtection from '../../hooks/useAdminProtection';
 import Button from '../UI/Button';
 import './Users.css';
+import useToast from '../../hooks/useToast';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -22,6 +23,7 @@ const Users = () => {
   const { isAdmin } = useAuth();
   // Add admin protection to prevent direct URL access
   const { hasAccess } = useAdminProtection();
+  const { showSuccess, showError } = useToast();
 
   // Use useCallback to prevent unnecessary re-renders
   const fetchUsers = useCallback(async () => {
@@ -123,7 +125,7 @@ const Users = () => {
           // Update the users list by filtering out the deleted user
           setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
           // Show success message
-          alert('تم حذف المستخدم بنجاح');
+          showSuccess('تم حذف المستخدم بنجاح');
         } else {
           throw new Error('Failed to delete user');
         }
@@ -142,7 +144,7 @@ const Users = () => {
           errorMessage = err.response.data.message;
         }
 
-        alert(errorMessage);
+        showError(errorMessage);
       } finally {
         setLoading(false);
         setActionInProgress(false);
@@ -196,14 +198,14 @@ const Users = () => {
 
     // Basic validation
     if (!formData.name.trim() || !formData.email.trim()) {
-      alert('الرجاء ملء جميع الحقول المطلوبة');
+      showError('الرجاء ملء جميع الحقول المطلوبة');
       return;
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      alert('الرجاء إدخال بريد إلكتروني صحيح');
+      showError('الرجاء إدخال بريد إلكتروني صحيح');
       return;
     }
 
@@ -221,7 +223,7 @@ const Users = () => {
       if (isAddingUser) {
         // Create new user
         if (!userData.password) {
-          alert('كلمة المرور مطلوبة لإنشاء مستخدم جديد');
+          showError('كلمة المرور مطلوبة لإنشاء مستخدم جديد');
           setLoading(false);
           setActionInProgress(false);
           return;
@@ -229,7 +231,7 @@ const Users = () => {
 
         // Password validation
         if (userData.password.length < 8) {
-          alert('يجب أن تكون كلمة المرور 8 أحرف على الأقل');
+          showError('يجب أن تكون كلمة المرور 8 أحرف على الأقل');
           setLoading(false);
           setActionInProgress(false);
           return;
@@ -240,6 +242,7 @@ const Users = () => {
         // Verify creation was successful
         if (response.status >= 200 && response.status < 300) {
           setIsAddingUser(false);
+          showSuccess('تم إنشاء المستخدم بنجاح');
         } else {
           throw new Error('Failed to create user');
         }
@@ -253,7 +256,7 @@ const Users = () => {
           delete userData.password;
         } else if (userData.password.length < 8) {
           // Password validation if provided
-          alert('يجب أن تكون كلمة المرور 8 أحرف على الأقل');
+          showError('يجب أن تكون كلمة المرور 8 أحرف على الأقل');
           setLoading(false);
           setActionInProgress(false);
           return;
@@ -264,6 +267,7 @@ const Users = () => {
         // Verify update was successful
         if (response.status >= 200 && response.status < 300) {
           setEditingUser(null);
+          showSuccess('تم تحديث المستخدم بنجاح');
         } else {
           throw new Error('Failed to update user');
         }
@@ -288,7 +292,7 @@ const Users = () => {
         errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
       }
 
-      alert(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
       setActionInProgress(false);
