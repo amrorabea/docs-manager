@@ -80,6 +80,7 @@ const DepartmentList = () => {
       setFormData({ name: '', description: '' });
       setEditingId(null);
       setShowForm(false);
+      
     } catch (err) {
       console.error('Error saving department:', err);
       
@@ -148,6 +149,7 @@ const DepartmentList = () => {
         );
         
         showSuccess('تم حذف الإدارة بنجاح');
+ 
       } catch (err) {
         console.error('Error deleting department:', err);
         

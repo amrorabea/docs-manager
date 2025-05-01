@@ -20,10 +20,9 @@ const PolicyForm = () => {
     department: '',
     approvalDate: '',
     reviewCycleYears: 2,
-    approvalValidity: '',
     wordFile: null,
     pdfFile: null
-    // Status will be determined automatically based on dates
+    // أزلنا approvalValidity لأنه سيتم حسابه تلقائيًا
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,10 +60,9 @@ const PolicyForm = () => {
             department: data.department?._id || '',
             approvalDate: formatDate(data.approvalDate),
             reviewCycleYears: data.reviewCycleYears || 2,
-            approvalValidity: formatDate(data.approvalValidity),
             wordFile: null,
             pdfFile: null
-            // Status will be determined automatically
+            // أزلنا approvalValidity لأنه سيتم حسابه تلقائيًا
           });
           
           setExistingFiles({
@@ -154,14 +152,48 @@ const PolicyForm = () => {
     }
   };
 
-  // Function to determine status based on dates
-  const determineStatus = () => {
-    // If the expiration date is in the future, status is 'valid' (ساري)
-    // Otherwise status is 'expired' (منتهي)
-    const today = new Date();
-    const expirationDate = new Date(formData.approvalValidity);
+  // إضافة دالة لحساب تاريخ انتهاء الصلاحية تلقائيًا بناءً على تاريخ الاعتماد ودورة المراجعة
+  const calculateExpiryDate = (approvalDate, reviewCycleYears) => {
+    // التحقق من صحة المدخلات
+    if (!approvalDate) return '';
     
-    return expirationDate > today ? 'valid' : 'expired';
+    // التأكد من أن reviewCycleYears قيمة رقمية صحيحة
+    const cycleYears = parseInt(reviewCycleYears, 10);
+    
+    // إذا كانت القيمة NaN أو 0 أو سالبة، استخدم 1 كقيمة افتراضية
+    if (isNaN(cycleYears) || cycleYears <= 0) {
+      return ''; // إرجاع قيمة فارغة إذا كانت دورة المراجعة غير صالحة
+    }
+    
+    try {
+      const approvalDateObj = new Date(approvalDate);
+      // التحقق من صحة التاريخ
+      if (isNaN(approvalDateObj.getTime())) {
+        return '';
+      }
+      
+      const expiryDate = new Date(approvalDateObj);
+      expiryDate.setFullYear(approvalDateObj.getFullYear() + cycleYears);
+      
+      // تنسيق التاريخ كـ YYYY-MM-DD للاستخدام في النموذج
+      return expiryDate.toISOString().split('T')[0];
+    } catch (error) {
+      console.error("Error calculating expiry date:", error);
+      return '';
+    }
+  };
+
+  // تعديل دالة determineStatus للاعتماد على التاريخ المحسوب
+  const determineStatus = () => {
+    // حساب تاريخ انتهاء الصلاحية
+    const expiryDate = calculateExpiryDate(formData.approvalDate, formData.reviewCycleYears);
+    
+    // إذا كان تاريخ انتهاء الصلاحية في المستقبل، الحالة 'valid' (ساري)
+    // وإلا الحالة 'expired' (منتهي)
+    const today = new Date();
+    const calculatedExpiryDate = new Date(expiryDate);
+    
+    return calculatedExpiryDate > today ? 'valid' : 'expired';
   };
 
   // Modify the isFutureDate function to handle existing policies
@@ -184,13 +216,12 @@ const PolicyForm = () => {
     setLoading(true);
     setError('');
     
-    // Client-side validation
+    // تعديل قائمة الحقول المطلوبة (إزالة approvalValidity)
     const requiredFields = {
       name: 'اسم السياسة',
       department: 'الإدارة',
       approvalDate: 'تاريخ الاعتماد',
-      reviewCycleYears: 'دورة المراجعة',
-      approvalValidity: 'تاريخ انتهاء الصلاحية'
+      reviewCycleYears: 'دورة المراجعة'
     };
     
     // Check required fields
@@ -222,6 +253,20 @@ const PolicyForm = () => {
       return;
     }
     
+    // التحقق من صحة دورة المراجعة
+    const cycleYears = parseInt(formData.reviewCycleYears, 10);
+    if (isNaN(cycleYears) || cycleYears <= 0) {
+      const fieldElement = document.getElementById('reviewCycleYears');
+      if (fieldElement) {
+        fieldElement.classList.add('error-field');
+        fieldElement.focus();
+      }
+      setError('يجب أن تكون دورة المراجعة رقماً موجباً');
+      showError('يجب أن تكون دورة المراجعة رقماً موجباً');
+      setLoading(false);
+      return;
+    }
+    
     // Continue with the rest of the form submission...
     try {
       const formDataToSend = new FormData();
@@ -235,12 +280,23 @@ const PolicyForm = () => {
       console.log('Cookies available:', headers);
       console.log('Access token exists:', !!localStorage.getItem('accessToken'));
       
-      // Add text fields
+      // حساب تاريخ انتهاء الصلاحية تلقائيًا
+      const calculatedExpiryDate = calculateExpiryDate(formData.approvalDate, formData.reviewCycleYears);
+      
+      // التأكد من صحة تاريخ الانتهاء المحسوب
+      if (!calculatedExpiryDate) {
+        setError('لا يمكن حساب تاريخ انتهاء الصلاحية. تأكد من صحة تاريخ الاعتماد ودورة المراجعة');
+        showError('لا يمكن حساب تاريخ انتهاء الصلاحية. تأكد من صحة تاريخ الاعتماد ودورة المراجعة');
+        setLoading(false);
+        return;
+      }
+      
+      // إضافة البيانات للنموذج
       formDataToSend.append('name', formData.name);
       formDataToSend.append('department', formData.department);
       formDataToSend.append('approvalDate', formData.approvalDate);
       formDataToSend.append('reviewCycleYears', formData.reviewCycleYears);
-      formDataToSend.append('approvalValidity', formData.approvalValidity);
+      formDataToSend.append('approvalValidity', calculatedExpiryDate); // استخدام التاريخ المحسوب
       
       // Determine status automatically based on dates
       const status = determineStatus();
@@ -252,19 +308,33 @@ const PolicyForm = () => {
         department: formData.department,
         approvalDate: formData.approvalDate,
         reviewCycleYears: formData.reviewCycleYears,
-        approvalValidity: formData.approvalValidity,
+        approvalValidity: calculatedExpiryDate,
         status,
         hasWordFile: !!formData.wordFile,
         hasPdfFile: !!formData.pdfFile
       });
       
-      // Add files only if they are selected
+      // Add files only if they are selected, and preserve policy name in filenames
       if (formData.wordFile) {
-        formDataToSend.append('wordFile', formData.wordFile);
+        // Create a File object with the policy name included in the filename
+        const fileExtension = formData.wordFile.name.split('.').pop();
+        const newWordFile = new File(
+          [formData.wordFile], 
+          `${formData.name}.${fileExtension}`, 
+          { type: formData.wordFile.type }
+        );
+        formDataToSend.append('wordFile', newWordFile);
       }
       
       if (formData.pdfFile) {
-        formDataToSend.append('pdfFile', formData.pdfFile);
+        // Create a File object with the policy name included in the filename
+        const fileExtension = formData.pdfFile.name.split('.').pop();
+        const newPdfFile = new File(
+          [formData.pdfFile], 
+          `${formData.name}.${fileExtension}`, 
+          { type: formData.pdfFile.type }
+        );
+        formDataToSend.append('pdfFile', newPdfFile);
       }
 
       if (id) {
@@ -275,8 +345,12 @@ const PolicyForm = () => {
         showSuccess('تم إنشاء السياسة بنجاح');
       }
       
-      refreshPolicies();
-      navigate('/');
+      // تحديث قائمة السياسات أولاً
+      await refreshPolicies();
+      
+      // الانتقال للصفحة الرئيسية مع تحديثها
+      window.location.href = '/';
+      
     } catch (err) {
       console.error('Error saving policy:', err);
       
@@ -467,26 +541,6 @@ const PolicyForm = () => {
           </div>
           
           <div className="form-group">
-            <label htmlFor="approvalValidity">تاريخ انتهاء الصلاحية</label>
-            <input
-              type="date"
-              id="approvalValidity"
-              name="approvalValidity"
-              value={formData.approvalValidity}
-              onChange={handleChange}
-              required
-              className="form-control"
-              aria-required="true"
-              aria-invalid={!!error && !formData.approvalValidity}
-            />
-            <small className="form-text text-muted">
-              سيتم تحديد حالة السياسة تلقائياً: ساري إذا كان تاريخ الانتهاء في المستقبل، ومنتهي إذا كان في الماضي.
-            </small>
-          </div>
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
             <label htmlFor="reviewCycleYears">دورة المراجعة (بالسنوات)</label>
             <input
               type="number"
@@ -501,6 +555,17 @@ const PolicyForm = () => {
               aria-required="true"
               aria-invalid={!!error && !formData.reviewCycleYears}
             />
+            
+            {/* عرض تاريخ انتهاء الصلاحية المحسوب للمستخدم كمعلومة فقط */}
+            {formData.approvalDate && formData.reviewCycleYears > 0 ? (
+              <small className="form-text text-muted">
+                تاريخ انتهاء الصلاحية سيكون: {calculateExpiryDate(formData.approvalDate, formData.reviewCycleYears)}
+              </small>
+            ) : formData.approvalDate ? (
+              <small className="form-text text-warning">
+                الرجاء إدخال دورة مراجعة صالحة لحساب تاريخ الانتهاء
+              </small>
+            ) : null}
           </div>
         </div>
         

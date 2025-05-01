@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaEdit, FaTrash, FaFileWord, FaFilePdf, FaSearch, FaPlus } from 'react-icons/fa';
-import { deletePolicy } from '../../services/policyService';
+import { deletePolicy, downloadPolicyFile } from '../../services/policyService';
 import useAuth from '../../hooks/useAuth';
 import usePolicyContext from '../../hooks/usePolicyContext';
 import useToast from '../../hooks/useToast';
@@ -107,137 +107,7 @@ const PolicyList = () => {
 
   const handleDownload = async (policy, fileType) => {
     try {
-      const url = fileType === 'pdf' ? (process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.pdfFileUrl}` : policy.pdfFileUrl) : (process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.wordFileUrl}` : policy.wordFileUrl);
-      
-      // فتح نافذة جديدة للتنزيل
-      const newWindow = window.open('', '_blank');
-      
-      if (newWindow) {
-        // تحضير اسم الملف
-        const safeFileName = policy.name.replace(/[^a-zA-Z0-9\u0600-\u06FF\s.-]/g, '_');
-        const fileExtension = fileType === 'pdf' ? 'pdf' : 'docx';
-        const downloadFileName = `${safeFileName}.${fileExtension}`;
-
-        // إضافة HTML للنافذة الجديدة مع معلومات التحميل
-        newWindow.document.write(`
-          <!DOCTYPE html>
-          <html dir="rtl">
-            <head>
-              <title>جاري التحميل...</title>
-              <meta charset="UTF-8">
-              <style>
-                body {
-                  font-family: Arial, sans-serif;
-                  text-align: center;
-                  margin: 0;
-                  padding: 0;
-                  background-color: #f5f5f5;
-                  height: 100vh;
-                  display: flex;
-                  flex-direction: column;
-                  justify-content: center;
-                  align-items: center;
-                  color: #333;
-                }
-                .container {
-                  background-color: white;
-                  padding: 30px;
-                  border-radius: 8px;
-                  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                  max-width: 500px;
-                  width: 90%;
-                }
-                h2 {
-                  margin-top: 0;
-                  color: #2c3e50;
-                }
-                .loader {
-                  border: 4px solid #f3f3f3;
-                  border-top: 4px solid #3498db;
-                  border-radius: 50%;
-                  width: 40px;
-                  height: 40px;
-                  animation: spin 2s linear infinite;
-                  margin: 20px auto;
-                }
-                @keyframes spin {
-                  0% { transform: rotate(0deg); }
-                  100% { transform: rotate(360deg); }
-                }
-                a {
-                  display: inline-block;
-                  margin-top: 15px;
-                  color: #3498db;
-                  text-decoration: none;
-                  padding: 10px 20px;
-                  background-color: #f0f8ff;
-                  border-radius: 4px;
-                  border: 1px solid #3498db;
-                  transition: all 0.3s;
-                }
-                a:hover {
-                  background-color: #3498db;
-                  color: white;
-                }
-                .file-name {
-                  font-weight: bold;
-                  margin-top: 15px;
-                  color: #666;
-                }
-              </style>
-              <script>
-                // تحضير عملية التنزيل
-                window.onload = function() {
-                  const url = "${url}";
-                  const fileName = "${downloadFileName}";
-                  
-                  // تأخير بسيط لتحسين تجربة المستخدم
-                  setTimeout(function() {
-                    fetch(url)
-                      .then(response => response.blob())
-                      .then(blob => {
-                        const blobUrl = window.URL.createObjectURL(blob);
-                        const downloadLink = document.createElement('a');
-                        
-                        downloadLink.href = blobUrl;
-                        downloadLink.download = fileName;
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                        
-                        // تحديث واجهة المستخدم
-                        document.getElementById('downloadStatus').innerHTML = 'تم بدء التنزيل!';
-                        document.getElementById('loader').style.borderTopColor = '#27ae60';
-                        
-                        // تنظيف بعد التنزيل
-                        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-                      })
-                      .catch(error => {
-                        console.error('Download error:', error);
-                        document.getElementById('downloadStatus').innerHTML = 'حدث خطأ أثناء التنزيل، يرجى المحاولة مرة أخرى.';
-                        document.getElementById('downloadLink').style.display = 'block';
-                      });
-                  }, 1000);
-                };
-              </script>
-            </head>
-            <body>
-              <div class="container">
-                <h2>جاري تحميل الملف</h2>
-                <div class="file-name">${downloadFileName}</div>
-                <div class="loader" id="loader"></div>
-                <p id="downloadStatus">جاري تحضير الملف للتنزيل...</p>
-                <a href="${url}" download="${downloadFileName}" id="downloadLink" style="display: none;">انقر هنا للتنزيل اليدوي</a>
-              </div>
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
-      } else {
-        console.error('Failed to open new window for download');
-        showError('فشل في فتح نافذة جديدة للتنزيل');
-      }
-
+      await downloadPolicyFile(policy._id, fileType === 'pdf' ? 'pdf' : 'word');
     } catch (error) {
       console.error('Download error:', error);
       showError('فشل في تحميل الملف');

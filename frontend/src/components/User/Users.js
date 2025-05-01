@@ -10,6 +10,7 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [actionInProgress, setActionInProgress] = useState(false);
@@ -122,10 +123,11 @@ const Users = () => {
 
         // Verify deletion was successful
         if (response.status >= 200 && response.status < 300) {
-          // Update the users list by filtering out the deleted user
+          // تحديث القائمة مباشرة بإزالة المستخدم المحذوف
           setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
           // Show success message
           showSuccess('تم حذف المستخدم بنجاح');
+
         } else {
           throw new Error('Failed to delete user');
         }
@@ -156,14 +158,15 @@ const Users = () => {
   const handleEditUser = (user) => {
     if (actionInProgress) return;
 
-    setIsAddingUser(false);
     setEditingUser(user);
+    setIsAddingUser(false);
     setFormData({
       name: user.name,
       email: user.email,
       role: user.role || (user.isAdmin ? 'admin' : 'user'),
       password: '' // Clear password field when editing
     });
+    setShowForm(true); // عرض النموذج
   };
 
   // Function to start adding a new user
@@ -178,6 +181,7 @@ const Users = () => {
       role: 'user', // Set default role
       password: ''
     });
+    setShowForm(!showForm); // تبديل حالة عرض النموذج
   };
 
   // Function to handle form input changes
@@ -241,7 +245,13 @@ const Users = () => {
 
         // Verify creation was successful
         if (response.status >= 200 && response.status < 300) {
+          // إضافة المستخدم الجديد مباشرة للقائمة بدلاً من إعادة تحميل الكل
+         
+          setTimeout(() => {
+            window.location.reload();
+          }, 300);
           setIsAddingUser(false);
+          setShowForm(false); // إغلاق النموذج بعد الإضافة
           showSuccess('تم إنشاء المستخدم بنجاح');
         } else {
           throw new Error('Failed to create user');
@@ -266,14 +276,19 @@ const Users = () => {
 
         // Verify update was successful
         if (response.status >= 200 && response.status < 300) {
+          // تحديث المستخدم في القائمة مباشرة
+          const updatedUser = response.data;
+          setUsers(prevUsers => prevUsers.map(user => 
+            user._id === editingUser._id ? updatedUser : user
+          ));
+          
           setEditingUser(null);
+          setShowForm(false); // إغلاق النموذج بعد التعديل
           showSuccess('تم تحديث المستخدم بنجاح');
         } else {
           throw new Error('Failed to update user');
         }
       }
-
-      fetchUsers();
     } catch (err) {
       // Skip error handling for canceled requests
       if (err.isCanceled) {
@@ -305,6 +320,7 @@ const Users = () => {
 
     setEditingUser(null);
     setIsAddingUser(false);
+    setShowForm(false); // إغلاق النموذج
   };
 
   const retryFetch = () => {
@@ -312,7 +328,7 @@ const Users = () => {
   };
 
   // Show loading only when initially loading users, not during other operations
-  if (loading && !editingUser && !isAddingUser && !actionInProgress) {
+  if (loading && !showForm && !actionInProgress) {
     return <div className="loading">جاري التحميل...</div>;
   }
 
@@ -321,85 +337,6 @@ const Users = () => {
       <div className="error-container">
         <div className="error">{error}</div>
         <button className="retry-btn" onClick={retryFetch}>إعادة المحاولة</button>
-      </div>
-    );
-  }
-
-  // If we're editing or adding a user, show the form
-  if (editingUser || isAddingUser) {
-    return (
-      <div className="edit-user-container">
-        <h1 className="edit-user-title">
-          {isAddingUser ? 'إضافة مستخدم جديد' : 'تعديل المستخدم'}
-        </h1>
-
-        <form onSubmit={handleSaveUser} className="user-form">
-          <div className="form-group">
-            <label htmlFor="name">الاسم</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              className="form-control"
-              disabled={actionInProgress}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">البريد الإلكتروني</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className="form-control"
-              disabled={actionInProgress}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">
-              كلمة المرور {!isAddingUser && '(اتركها فارغة إذا لم ترغب في تغييرها)'}
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required={isAddingUser}
-              className="form-control"
-              disabled={actionInProgress}
-              minLength={8}
-            />
-          </div>
-
-          {/* Remove the role selection completely */}
-          <input type="hidden" name="role" value="user" />
-
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="save-btn"
-              disabled={actionInProgress || loading}
-            >
-              {actionInProgress ? 'جاري الحفظ...' : 'حفظ'}
-            </button>
-            <button
-              type="button"
-              className="cancel-btn"
-              onClick={handleCancel}
-              disabled={actionInProgress || loading}
-            >
-              إلغاء
-            </button>
-          </div>
-        </form>
       </div>
     );
   }
@@ -415,13 +352,90 @@ const Users = () => {
             variant="primary"
             disabled={actionInProgress}
           >
-            إضافة مستخدم جديد
+            {showForm ? 'إلغاء' : 'إضافة مستخدم جديد'}
           </Button>
         )}
       </div>
 
       {/* Show loading indicator during operations */}
       {actionInProgress && <div className="action-loading">جاري تنفيذ العملية...</div>}
+
+      {/* نموذج إضافة أو تعديل المستخدم يظهر في نفس الصفحة */}
+      {showForm && (
+        <div className="user-form-container">
+          <h3 className="form-subtitle">
+            {isAddingUser ? 'إضافة مستخدم جديد' : 'تعديل المستخدم'}
+          </h3>
+
+          <form onSubmit={handleSaveUser} className="user-form">
+            <div className="form-group">
+              <label htmlFor="name">الاسم</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                className="form-control"
+                disabled={actionInProgress}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="email">البريد الإلكتروني</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                className="form-control"
+                disabled={actionInProgress}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">
+                كلمة المرور {!isAddingUser && '(اتركها فارغة إذا لم ترغب في تغييرها)'}
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required={isAddingUser}
+                className="form-control"
+                disabled={actionInProgress}
+                minLength={8}
+              />
+            </div>
+
+            {/* Remove the role selection completely */}
+            <input type="hidden" name="role" value="user" />
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="save-btn"
+                disabled={actionInProgress || loading}
+              >
+                {actionInProgress ? 'جاري الحفظ...' : 'حفظ'}
+              </button>
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={handleCancel}
+                disabled={actionInProgress || loading}
+              >
+                إلغاء
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="users-table-container">
         <table className="users-table">

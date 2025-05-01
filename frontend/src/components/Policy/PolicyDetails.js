@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPolicy } from '../../services/policyService';
+import { getPolicy, downloadPolicyFile } from '../../services/policyService';
 import { formatDate } from '../../utils/dateFormatter';
 import './Policy.css';
 
@@ -27,6 +27,16 @@ const PolicyDetails = () => {
 
     fetchPolicy();
   }, [id]);
+
+  const handleDownload = async (fileType) => {
+    if (policy) {
+      try {
+        await downloadPolicyFile(policy._id, fileType === 'pdf' ? 'pdf' : 'word');
+      } catch (error) {
+        console.error(`Error downloading ${fileType} file:`, error);
+      }
+    }
+  };
 
   if (loading) {
     return <div className="loading">جاري التحميل...</div>;
@@ -90,16 +100,22 @@ const PolicyDetails = () => {
           <h3 className="section-title">الملفات</h3>
           <div className="policy-files-container">
             {policy.pdfFileUrl && (
-              <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.pdfFileUrl}` : policy.pdfFileUrl} className="file-link-large pdf" target="_blank" rel="noopener noreferrer">
+              <button 
+                onClick={() => handleDownload('pdf')} 
+                className="file-link-large pdf"
+              >
                 <span className="file-icon">PDF</span>
-                <span className="file-name">عرض ملف PDF</span>
-              </a>
+                <span className="file-name">تحميل ملف PDF</span>
+              </button>
             )}
             {policy.wordFileUrl && (
-              <a href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}${policy.wordFileUrl}` : policy.wordFileUrl} className="file-link-large word" target="_blank" rel="noopener noreferrer">
+              <button 
+                onClick={() => handleDownload('word')} 
+                className="file-link-large word"
+              >
                 <span className="file-icon">Word</span>
-                <span className="file-name">عرض ملف Word</span>
-              </a>
+                <span className="file-name">تحميل ملف Word</span>
+              </button>
             )}
             {!policy.pdfFileUrl && !policy.wordFileUrl && (
               <div className="no-files">لا توجد ملفات مرفقة</div>
