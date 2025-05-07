@@ -199,13 +199,25 @@ exports.searchPolicyContent = async (req, res) => {
     for (const policy of policies) {
       if (!policy.wordFileUrl) continue;
 
+      let filePath = null; // Declare filePath here, initialize to null
+
       try {
-        const response = await axios.get(policy.wordFileUrl, {
-          responseType: 'arraybuffer'
-        });
+        // Construct the absolute file path
+        // policy.wordFileUrl is like '/uploads/filename.docx'
+        // path.join needs to go up one level from controllers to the project root where 'uploads' is.
+        // Assumes 'uploads' directory is at the root of the backend project, sibling to 'controllers', 'models' etc.
+        // If 'uploads' is at the very root of the 'docs-manager' alongside 'backend' and 'frontend',
+        // the path needs to be path.join(__dirname, '..', '..', policy.wordFileUrl)
+        // Based on typical project structure, let's assume 'uploads' is inside 'backend'
+        filePath = path.join(__dirname, '..', policy.wordFileUrl); // Goes from /backend/controllers -> /backend -> /backend/uploads/file.docx
+
+        console.log(`Attempting to read Word file from path: ${filePath}`); // Debugging
+
+        // Read the file directly from the filesystem
+        const fileBuffer = await fs.promises.readFile(filePath);
 
         const { value: text } = await mammoth.extractRawText({
-          buffer: response.data
+          buffer: fileBuffer // Use the file buffer directly
         });
 
         // Split text into sentences and filter empty ones
@@ -246,7 +258,11 @@ exports.searchPolicyContent = async (req, res) => {
           });
         }
       } catch (error) {
-        console.error(`Error processing file for policy ${policy.name}:`, error);
+        console.error(`Error processing file for policy ${policy.name} (Original URL: ${policy.wordFileUrl}):`, error.message);
+        if (error.code === 'ENOENT') {
+            // filePath here will either be the constructed path or null if path.join itself failed (unlikely for ENOENT)
+            console.error(`File not found at constructed path: ${filePath}. Check if the path is correct and the file exists.`);
+        }
         continue;
       }
     }
