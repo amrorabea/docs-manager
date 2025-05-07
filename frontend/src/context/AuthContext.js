@@ -62,7 +62,6 @@ export const AuthProvider = ({ children }) => {
 
   // Initial session verification - prevent auto-refresh for users who haven't explicitly logged in
   useEffect(() => {
-    let triedRefresh = false;
     const verifyRefreshToken = async () => {
       try {
         setLoading(true);
@@ -110,7 +109,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     verifyRefreshToken();
-  }, []); // Run only once on component mount
+  }, [auth?.accessToken]); // Run only once on component mount
 
   // Handle login - using useCallback to maintain function reference
   const handleLogin = useCallback(async (credentials) => {

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { getPolicies, searchPolicies } from '../services/policyService';
 import { getDepartments } from '../services/departmentService';
 import AuthContext from './AuthContext'; // Import AuthContext
@@ -22,9 +22,9 @@ export const PolicyProvider = ({ children }) => {
   const fetchingDepartments = useRef(false);
   
   // Get auth context to check authentication status and handle auth errors
-  const { auth, logout } = useContext(AuthContext);
+  const { auth } = useContext(AuthContext);
 
-  const fetchPolicies = async () => {
+  const fetchPolicies = useCallback(async () => {
     if (!auth?.accessToken && !localStorage.getItem('accessToken')) {
       console.log('No access token available, skipping policy fetch');
       setLoading(false);
@@ -81,7 +81,7 @@ export const PolicyProvider = ({ children }) => {
       setLoading(false);
       fetchingPolicies.current = false;
     }
-  };
+  }, [auth?.accessToken]);
 
   // New function for searching policies
   const handleSearch = async (query, departmentId = null) => {
@@ -140,7 +140,7 @@ export const PolicyProvider = ({ children }) => {
     });
   };
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     if (!auth?.accessToken && !localStorage.getItem('accessToken')) {
       console.log('No access token available, skipping departments fetch');
       return;
@@ -187,7 +187,7 @@ export const PolicyProvider = ({ children }) => {
     } finally {
       fetchingDepartments.current = false;
     }
-  };
+  }, [auth?.accessToken]);
 
   // Fetch data when auth changes
   useEffect(() => {
@@ -215,7 +215,7 @@ export const PolicyProvider = ({ children }) => {
     return () => {
       // Nothing to clean up, but could cancel any pending requests here
     };
-  }, [auth?.accessToken]);
+  }, [auth?.accessToken, fetchPolicies, fetchDepartments]);
 
   return (
     <PolicyContext.Provider value={{ 

@@ -2,7 +2,6 @@ import React, { useState, useContext, useEffect, useMemo } from 'react';
 import PolicyContext from '../../context/PolicyContext';
 import useAuth from '../../hooks/useAuth';
 import useToast from '../../hooks/useToast';
-import useAdminProtection from '../../hooks/useAdminProtection';
 import { createDepartment, updateDepartment, deleteDepartment } from '../../services/departmentService';
 import './Department.css';
 
@@ -10,7 +9,6 @@ const DepartmentList = () => {
   const { departments, setDepartments, loading, error: contextError } = useContext(PolicyContext);
   const { isAdmin } = useAuth();
   const { showSuccess, showError } = useToast();
-  const { hasAccess } = useAdminProtection();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [editingId, setEditingId] = useState(null);

@@ -27,7 +27,7 @@ const PolicyList = () => {
   
   // Get context data
   const { policies, setPolicies, departments, loading, error, refreshPolicies, searchPolicies } = usePolicyContext();
-  const { user, isAdmin, logout } = useAuth(); // Add logout to destructuring
+  const { isAdmin, logout } = useAuth(); // Add logout to destructuring
   const { showSuccess, showError } = useToast();
 
   const handleSearch = async (query) => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate';
 import useAuth from '../../hooks/useAuth';
-import useAdminProtection from '../../hooks/useAdminProtection';
 import Button from '../UI/Button';
 import './Users.css';
 import useToast from '../../hooks/useToast';
@@ -22,8 +21,6 @@ const Users = () => {
   });
   const axiosPrivate = useAxiosPrivate();
   const { isAdmin } = useAuth();
-  // Add admin protection to prevent direct URL access
-  const { hasAccess } = useAdminProtection();
   const { showSuccess, showError } = useToast();
 
   // Use useCallback to prevent unnecessary re-renders

@@ -487,11 +487,10 @@ const apiRequest = async (url, method = 'GET', data = null) => {
         console.log('API request canceled:', error.message);
       }
       // Return a standardized cancel error
-      throw {
-        isCanceled: true,
-        message: 'Request was canceled',
-        originalError: error
-      };
+      const cancelError = new Error('Request was canceled');
+      cancelError.isCanceled = true;
+      cancelError.originalError = error;
+      throw cancelError;
     } else {
       console.error('API request error:', error);
       throw error;
